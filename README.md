@@ -102,7 +102,21 @@ int read_file(char *filename, char paragraphs[100][1000]) {
     fclose(fp);
     return p + 1;
 }
+PARAnode* cpy_para(PARAnode *A, PARAnode *B) {
+    if (A == NULL) return B;
+    B = INSERT_NW(B, A->word);
+    B = cpy_para(A->left,  B);
+    B = cpy_para(A->right, B);
+    return B;
+}
+PARAnode* UNION(PARAnode *A,PARAnode *B){
+PARAnode *UNIONpara = NULL;
+UNIONpara = cpy_para(A,UNIONpara);
+UNIONpara = cpy_para(B,UNIONpara);
+return UNIONpara;
+}
 int main(){
+    int i= 0;
     char filename[100];
  char paragraphs[100][1000];
 printf("write the name of first file :");
@@ -113,5 +127,3 @@ printf("write the name of first file :");
     for (int i = 0; i < count; i++) {
         printf("Paragraph %d:\n%s\n", i + 1, paragraphs[i]);
     }
-return 0;
-}
