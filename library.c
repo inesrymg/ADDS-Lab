@@ -6,50 +6,65 @@
 #include <stdbool.h>
 #include "library.h"
 
+// Abstract Machine - Binary Search Tree (Word Set)
 
-PARAnode *CREATING_NW(char *word){
-    PARAnode *p = (PARAnode *)malloc(sizeof(PARAnode));
+WordNode *create_NW(char *word){
+    WordNode *p = (WordNode *)malloc(sizeof(WordNode));
     strncpy(p->word, word, 49);
     p->word[49] = '\0';
     p->left = NULL;
     p->right = NULL;
     return p;
-}
-PARAnode *INSERT_NW(PARAnode *R, char *word){
-    if(R == NULL) return CREATING_NW(word);
+} // Create and return a new isolated node containing word 
+
+WordNode *insert_NW(WordNode *R, char *word){
+    if(R == NULL) return create_NW(word);
     int cmp = strcmp(word, R->word);
-    if (cmp == 0) return R;
+    if (cmp == 0) return R; // Word already exists, the tree is unchanged
     else if(cmp < 0)
-        R->left = INSERT_NW(R->left, word);
+        R->left = insert_NW(R->left, word);
     else
-        R->right = INSERT_NW(R->right, word);
+        R->right = insert_NW(R->right, word);
     return R;
-}
-bool SEARCH_NW(PARAnode *R, char *word) {
+} // Insert word into the BST rooted at R
+
+bool search_NW(WordNode *R, char *word) {
     if (R == NULL) return false;
     int cmp = strcmp(word, R->word);
     if (cmp == 0) return true;
     else if (cmp < 0)
-        return SEARCH_NW(R->left, word);
+        return search_NW(R->left, word);
     else
-        return SEARCH_NW(R->right, word);
-}
-void DESTROY_NW(PARAnode *R){
+        return search_NW(R->right, word);
+} // Search for word in the BST rooted at R, returns true if found and false otherwise
+
+WordNode *copy_bst(WordNode *R) {
+    if (R == NULL) return NULL;
+    WordNode *new_node = create_NW(R->word);
+    new_node->left = copy_bst(R->left);
+    new_node->right = copy_bst(R->right);
+    return new_node;
+} // Create and return a deep copy of the BST rooted at R
+
+void free_bst(WordNode *R){
     if(R == NULL) return;
-    DESTROY_NW(R->left);
-    DESTROY_NW(R->right);
+    free_bst(R->left);
+    free_bst(R->right);
     free(R);
-}
-void INORDER_TRAVERSAL(PARAnode* R){
+} // Free the entire BST and all its nodes
+
+void inorder_traversal(WordNode* R){
     if(R == NULL) return;
-    INORDER_TRAVERSAL(R->left);
+    inorder_traversal(R->left);
     printf("%s , ", R->word);
-    INORDER_TRAVERSAL(R->right);
-}
+    inorder_traversal(R->right);
+} // Perform an in-order traversal of the BST rooted at R, printing each word followed by a comma and space
+
 void to_lower_str(char *word){
     for (int i = 0; word[i]; i++)
         word[i] = tolower((unsigned char)word[i]);
-}
+} // Convert all characters in word to lowercase
+
 void remove_punct(char *word){
     int i, j = 0;
     for(i = 0; word[i] != '\0'; i++){
@@ -58,9 +73,16 @@ void remove_punct(char *word){
         }
     }
     word[j] = '\0';
-}
-PARAnode* PARA_SET(char *para) {
-    PARAnode *R = NULL;
+}  // Remove all punctuation characters from word, except for apostrophes
+
+// Abstract Machine - Paragraph (Linked List node containing a word set)
+
+
+
+
+// ------------------------------------------------------------
+WordNode* PARA_SET(char *para) {
+    WordNode *R = NULL;
     char *T = strtok(para, " \t\n");
     int is_first = 1;
     while (T != NULL) {
@@ -68,10 +90,10 @@ PARAnode* PARA_SET(char *para) {
         to_lower_str(T);
         if (strlen(T) > 0) {
             if (is_first) {
-                R = CREATING_NW(T);
+                R = create_NW(T);
                 is_first = 0;
             } else {
-                R = INSERT_NW(R, T);
+                R = insert_NW(R, T);
             }
         }
         T = strtok(NULL, " \t\n");
@@ -100,28 +122,12 @@ int read_file(char *filename, char paragraphs[100][1000]) {
     fclose(fp);
     return p + 1;
 }
-PARAnode* cpy_para(PARAnode *A, PARAnode *B) {
+WordNode* cpy_para(WordNode *A, WordNode *B) {
     if (A == NULL) return B;
     B = INSERT_NW(B, A->word);
     B = cpy_para(A->left,  B);
     B = cpy_para(A->right, B);
     return B;
 }
-PARAnode* UNION(PARAnode *A,PARAnode *B){
-PARAnode *UNIONpara = NULL;
-UNIONpara = cpy_para(A,UNIONpara);
-UNIONpara = cpy_para(B,UNIONpara);
-return UNIONpara;
-}
-int main(){
-    int i= 0;
-    char filename[100];
- char paragraphs[100][1000];
-printf("write the name of first file :");
- fgets(filename, sizeof(filename), stdin);
-     filename[strcspn(filename, "\n")] = '\0';
-    int count = read_file(filename, paragraphs);
-    printf("Total paragraphs: %d\n\n", count);
-    for (int i = 0; i < count; i++) {
-        printf("Paragraph %d:\n%s\n", i + 1, paragraphs[i]);
-    }
+
+
