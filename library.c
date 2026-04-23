@@ -62,10 +62,6 @@ void inorder_traversal(WordNode* R){
 } // Perform an in-order traversal of the BST rooted at R, printing each word followed by a comma and space
 
 
-
-
-
-
 // Abstract Machine - Paragraph List (Linked List of Word Sets)
 
 ParaList* create_para_list() {
@@ -125,11 +121,9 @@ ParaList* copy_para_list(ParaList* list) {
     return new_list; // Return the new paragraph list which is a deep copy of the original
 } // Create and return a deep copy of the given paragraph list, including deep copies of all paragraphs and their word sets
 
-ParaList* *para_list_load(const char* filename) {
 
 
-
-// ------------------------------------------------------------
+// --------------useful-------------------
 void to_lower_str(char *word) {
     for (int i = 0; word[i]; i++) {
         word[i] = tolower(word[i]);

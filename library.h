@@ -22,13 +22,27 @@ typedef struct {
     ParaNode* head;
 } ParaList;
 
-WordNode *create_NW(char *word);
-WordNode *insert_NW(WordNode *R, char *word);
-bool search_NW(WordNode *R, char *word);
-WordNode *copy_bst(WordNode *R);
-void free_bst(WordNode *R);
-void to_lower_str(char *str);
-void remove_punct(char *word);
+// BST operations
+WordNode* create_bst_NW(char* word);
+void free_bst(WordNode* R);
+WordNode* insert_bst_NW(WordNode* R, char* word);
+bool search_bst(WordNode* R, char* word);
+WordNode* copy_bst(WordNode* R);
+void inorder_traversal(WordNode* R);
+
+// paragraph list operations
+ParaList* create_para_list();
+void insert_para_list(ParaList* list, WordNode* para);
+ParaNode* get_para(ParaList* list, int para_id);
+void print_para_list(ParaList* list);
+
+
+void to_lower_str(char* word);
+void remove_punct(char* word);
+int normalise_word(char* word);
+
+
+
 
 
 
