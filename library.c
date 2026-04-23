@@ -8,7 +8,7 @@
 
 // Abstract Machine - Binary Search Tree (Word Set)
 
-WordNode *create_NW(char *word){
+WordNode *create_bst_NW(char *word){
     WordNode *p = (WordNode *)malloc(sizeof(WordNode));
     strncpy(p->word, word, 49);
     p->word[49] = '\0';
@@ -17,7 +17,14 @@ WordNode *create_NW(char *word){
     return p;
 } // Create and return a new isolated node containing word 
 
-WordNode *insert_NW(WordNode *R, char *word){
+void free_bst(WordNode *R){
+    if(R == NULL) return;
+    free_bst(R->left);
+    free_bst(R->right);
+    free(R);
+} // Free the entire BST and all its nodes : postorder 
+
+WordNode *insert_bst_NW(WordNode *R, char *word){
     if(R == NULL) return create_NW(word);
     int cmp = strcmp(word, R->word);
     if (cmp == 0) return R; // Word already exists, the tree is unchanged
@@ -28,14 +35,14 @@ WordNode *insert_NW(WordNode *R, char *word){
     return R;
 } // Insert word into the BST rooted at R
 
-bool search_NW(WordNode *R, char *word) {
+bool search_bst(WordNode *R, char *word) {
     if (R == NULL) return false;
     int cmp = strcmp(word, R->word);
     if (cmp == 0) return true;
     else if (cmp < 0)
-        return search_NW(R->left, word);
+        return search_bst(R->left, word);
     else
-        return search_NW(R->right, word);
+        return search_bst(R->right, word);
 } // Search for word in the BST rooted at R, returns true if found and false otherwise
 
 WordNode *copy_bst(WordNode *R) {
@@ -44,14 +51,8 @@ WordNode *copy_bst(WordNode *R) {
     new_node->left = copy_bst(R->left);
     new_node->right = copy_bst(R->right);
     return new_node;
-} // Create and return a deep copy of the BST rooted at R
+} // Create and return a deep copy of the BST rooted at R : preorder
 
-void free_bst(WordNode *R){
-    if(R == NULL) return;
-    free_bst(R->left);
-    free_bst(R->right);
-    free(R);
-} // Free the entire BST and all its nodes
 
 void inorder_traversal(WordNode* R){
     if(R == NULL) return;
@@ -60,74 +61,95 @@ void inorder_traversal(WordNode* R){
     inorder_traversal(R->right);
 } // Perform an in-order traversal of the BST rooted at R, printing each word followed by a comma and space
 
-void to_lower_str(char *word){
-    for (int i = 0; word[i]; i++)
-        word[i] = tolower((unsigned char)word[i]);
-} // Convert all characters in word to lowercase
 
-void remove_punct(char *word){
-    int i, j = 0;
-    for(i = 0; word[i] != '\0'; i++){
-        if(!ispunct((unsigned char)word[i]) || word[i] == '\''){
-            word[j++] = word[i];
+
+
+
+
+// Abstract Machine - Paragraph List (Linked List of Word Sets)
+
+ParaList* create_para_list() {
+    ParaList* list = (ParaList*)malloc(sizeof(ParaList));
+    list->head = NULL;
+    return list;
+} // Create and return an empty paragraph list
+
+void insert_para_list(ParaList* list, WordNode* para) {
+    ParaNode* new_node = (ParaNode*)malloc(sizeof(ParaNode));
+    new_node->para = para;
+    new_node->next = list->head;
+    list->head = new_node;
+} // Insert a new paragraph (WordNode) at the beginning of the paragraph list
+
+ParaNode* get_para(ParaList* list, int para_id) {
+    ParaNode* current = list->head;
+    while (current != NULL) {
+        if (current->para_id == para_id) {
+            return current;
         }
+        current = current->next;
     }
-    word[j] = '\0';
-}  // Remove all punctuation characters from word, except for apostrophes
+    return NULL; // Return NULL if no paragraph with the given ID is found
+} // Retrieve the paragraph node with the specified para_id from the paragraph list, returns NULL if not found
 
-// Abstract Machine - Paragraph (Linked List node containing a word set)
+void print_para_list(ParaList* list) {
+    ParaNode* current = list->head;
+    while (current != NULL) {
+        printf("Paragraph ID: %d\n", current->para_id);
+        printf("Words: ");
+        inorder_traversal(current->word_set);
+        printf("\n");
+        current = current->next;
+    }
+} // Print the contents of the paragraph list, including each paragraph's ID and its associated words
 
+void free_para_list(ParaList* list) {
+    ParaNode* current = list->head;
+    while (current != NULL) {
+        ParaNode* temp = current;
+        current = current->next;
+        free_bst(temp->word_set); // Free the BST associated with the paragraph
+        free(temp); // Free the paragraph node
+    }
+    free(list); // Free the paragraph list itself
+} // Free all memory associated with the paragraph list, including all paragraphs and their word sets
+
+ParaList* copy_para_list(ParaList* list) {
+    ParaList* new_list = create_para_list();
+    ParaNode* current = list->head;
+    while (current != NULL) {
+        WordNode* copied_para = copy_bst(current->word_set); // Deep copy the BST for the paragraph
+        insert_para_list(new_list, copied_para); // Insert the copied paragraph into the new list
+        current = current->next;
+    }
+    return new_list; // Return the new paragraph list which is a deep copy of the original
+} // Create and return a deep copy of the given paragraph list, including deep copies of all paragraphs and their word sets
+
+ParaList* *para_list_load(const char* filename) {
 
 
 
 // ------------------------------------------------------------
-WordNode* PARA_SET(char *para) {
-    WordNode *R = NULL;
-    char *T = strtok(para, " \t\n");
-    int is_first = 1;
-    while (T != NULL) {
-        remove_punct(T);
-        to_lower_str(T);
-        if (strlen(T) > 0) {
-            if (is_first) {
-                R = create_NW(T);
-                is_first = 0;
-            } else {
-                R = insert_NW(R, T);
-            }
-        }
-        T = strtok(NULL, " \t\n");
+void to_lower_str(char *word) {
+    for (int i = 0; word[i]; i++) {
+        word[i] = tolower(word[i]);
     }
-    return R;
-}
-int read_file(char *filename, char paragraphs[100][1000]) {
-    FILE *fp = fopen(filename, "r");
-    if (fp == NULL) {
-        printf("Error opening file\n");
-        return 0;
-    }
-    char line[1000];
-    int p = 0;
-    paragraphs[p][0] = '\0';
-    while (fgets(line, sizeof(line), fp)) {
-        if (strcmp(line, "\n") == 0) {
-            if (strlen(paragraphs[p]) > 0) {
-                p++;
-                paragraphs[p][0] = '\0';
-            }
-        } else {
-            strcat(paragraphs[p], line);
+} // Convert all characters in word to lowercase
+
+void remove_punct(char *word) {
+    int j = 0;
+    for (int i = 0; word[i]; i++) {
+        if (!ispunct(word[i])) {
+            word[j++] = word[i];
         }
     }
-    fclose(fp);
-    return p + 1;
-}
-WordNode* cpy_para(WordNode *A, WordNode *B) {
-    if (A == NULL) return B;
-    B = INSERT_NW(B, A->word);
-    B = cpy_para(A->left,  B);
-    B = cpy_para(A->right, B);
-    return B;
-}
+    word[j] = '\0';
+} // Remove all punctuation characters from word
+
+int normalise_word(char *word) {
+    remove_punct(word);
+    to_lower_str(word);
+    return strlen(word);
+} // Normalize word by removing punctuation and converting to lowercase, returns the length of the normalized word
 
 

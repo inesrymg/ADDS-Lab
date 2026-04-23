@@ -18,6 +18,9 @@ typedef struct ParaNode {
     struct ParaNode* next; 
 } ParaNode;
 
+typedef struct {
+    ParaNode* head;
+} ParaList;
 
 WordNode *create_NW(char *word);
 WordNode *insert_NW(WordNode *R, char *word);
