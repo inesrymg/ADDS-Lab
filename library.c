@@ -4,7 +4,6 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include "library.h"
-
 // Abstract Machine - Binary Search Tree (Word Set)
 
 WordNode* create_bst_NW(char* word) {
@@ -75,11 +74,13 @@ ParaList* create_para_list() {
     return list;
 } // Create and return an empty paragraph list
 
-void insert_para_list(ParaList* list, WordNode* para, int id) {
+void insert_para_list(ParaList* list, WordNode* para, int id, char** lines, int line_count) {
     ParaNode* new_node = (ParaNode*)malloc(sizeof(ParaNode));
 
     new_node->para_id = id;
     new_node->word_set = para;
+    new_node->lines = lines;
+    new_node->line_count = line_count;
     new_node->next = list->head;
 
     list->head = new_node;
@@ -113,12 +114,12 @@ void print_para_list(ParaList* list) {
 
 void free_para_list(ParaList* list) {
     ParaNode* current = list->head;
-
     while (current != NULL) {
         ParaNode* temp = current;
         current = current->next;
-
-        free_bst(temp->word_set); // Free the BST associated with the paragraph
+        free_bst(temp->word_set);
+        for (int i = 0; i < temp->line_count; i++) free(temp->lines[i]);
+        free(temp->lines); // Free the BST associated with the paragraph
         free(temp); // Free the paragraph node
     }
 
@@ -130,14 +131,17 @@ ParaList* copy_para_list(ParaList* list) {
     ParaNode* current = list->head;
 
     while (current != NULL) {
-        WordNode* copied_para = copy_bst(current->word_set); // Deep copy the BST for the paragraph
-        insert_para_list(new_list, copied_para, current->para_id); // Insert the copied paragraph into the new list
+        WordNode* copied_para = copy_bst(current->word_set);// Deep copy the BST for the paragraph
+      // Deep copy the lines array
+        char** copied_lines = (char**)malloc(current->line_count * sizeof(char*));
+        for (int i = 0; i < current->line_count; i++)
+            copied_lines[i] = strdup(current->lines[i]);
+        insert_para_list(new_list, copied_para, current->para_id, copied_lines, current->line_count); // Insert the copied paragraph into the new list
         current = current->next;
     }
 
     return new_list; // Return the new paragraph list which is a deep copy of the original
 } // Create and return a deep copy of the given paragraph list, including deep copies of all paragraphs and their word sets
-
 
 // -------- useful --------
 
@@ -151,11 +155,12 @@ void remove_punct(char* word) {
     int j = 0;
 
     for (int i = 0; word[i]; i++) {
-        if (!ispunct(word[i])) {
+        if (word[i] == '\'' && i > 0 && isalpha(word[i-1])) {
+            word[j++] = word[i];
+        } else if (!ispunct(word[i])) {
             word[j++] = word[i];
         }
     }
-
     word[j] = '\0';
 } // Remove all punctuation characters from word
 
@@ -165,6 +170,58 @@ int normalise_word(char* word) {
     return strlen(word);
 } // Normalize word by removing punctuation and converting to lowercase, returns the length of the normalized word
 
+ParaList* para_list_load(const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        fprintf(stderr, "Error: could not open file '%s'\n", filename);
+        return NULL;
+    }
+
+    ParaList* list = create_para_list();
+    WordNode* current_para = NULL;
+    char line[1024];
+    int para_id = 1;
+
+    char** current_lines = NULL;
+    int current_line_count = 0;
+
+    while (fgets(line, sizeof(line), file)) {
+        line[strcspn(line, "\r\n")] = '\0';
+
+        if (line[0] == '\0') {
+            if (current_para != NULL) {
+                insert_para_list(list, current_para, para_id++, current_lines, current_line_count);
+                current_para = NULL;
+                current_lines = NULL;
+                current_line_count = 0;
+            }
+        } else {
+            // Save raw line
+            current_lines = realloc(current_lines, (current_line_count + 1) * sizeof(char*));
+            current_lines[current_line_count++] = strdup(line);
+
+            char line_copy[1024];
+            strncpy(line_copy, line, 1023);
+            line_copy[1023] = '\0';
+            char* token = strtok(line_copy, " \t");
+            while (token != NULL) {
+                char word[50];
+                strncpy(word, token, 49);
+                word[49] = '\0';
+
+                if (normalise_word(word) > 0)
+                    current_para = insert_bst_NW(current_para, word);
+                token = strtok(NULL, " \t");
+            }
+        }
+    }
+
+    if (current_para != NULL)
+        insert_para_list(list, current_para, para_id, current_lines, current_line_count);
+
+    fclose(file);
+    return list;
+} //loading the files
 
 // -------- SET OPERATIONS --------
 WordNode* copy_into(WordNode* A, WordNode* B) {

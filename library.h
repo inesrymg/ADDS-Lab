@@ -15,7 +15,9 @@ typedef struct WordNode {
 typedef struct ParaNode {
     int para_id;
     WordNode* word_set;
-    struct ParaNode* next; 
+    char** lines;
+    int line_count;
+    struct ParaNode* next;
 } ParaNode;
 
 typedef struct {
@@ -32,7 +34,7 @@ void inorder_traversal(WordNode* R);
 
 // paragraph list operations
 ParaList* create_para_list();
-void insert_para_list(ParaList* list, WordNode* para);
+void insert_para_list(ParaList* list, WordNode* para, int id, char** lines, int line_count);
 ParaNode* get_para(ParaList* list, int para_id);
 void print_para_list(ParaList* list);
 
