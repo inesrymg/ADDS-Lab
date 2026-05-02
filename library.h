@@ -25,6 +25,12 @@ typedef struct {
 } ParaList;
 
 // BST operations
+char* node_value(WordNode* node);
+WordNode* LC(WordNode* node);
+WordNode* RC(WordNode* node);
+void ass_val(WordNode* node, char* word);
+void ass_LC(WordNode* node, WordNode* left_child);
+void ass_RC(WordNode* node, WordNode* right_child);
 WordNode* create_bst_NW(char* word);
 void free_bst(WordNode* R);
 WordNode* insert_bst_NW(WordNode* R, char* word);
@@ -33,10 +39,24 @@ WordNode* copy_bst(WordNode* R);
 void inorder_traversal(WordNode* R);
 
 // paragraph list operations
+int para_id(ParaNode* node);
+WordNode* word_set(ParaNode* node);
+ParaNode* next_para(ParaNode* node);
+void ass_para_id(ParaNode* node, int id);
+void ass_word_set(ParaNode* node, WordNode* ws);
+void ass_next(ParaNode* node, ParaNode* next);
 ParaList* create_para_list();
-void insert_para_list(ParaList* list, WordNode* para, int id, char** lines, int line_count);
+void insert_para(ParaList* list, WordNode* para, int id, char** lines, int line_count);
 ParaNode* get_para(ParaList* list, int para_id);
+void free_para_list(ParaList* list);
+ParaList* copy_para_list(ParaList* list);
 void print_para_list(ParaList* list);
+
+ParaList* para_list_load(const char* filename);
+
+WordNode* UNION(WordNode* A, WordNode* B);
+WordNode* INTERSECTION(WordNode* A, WordNode* B);
+WordNode* DIFFERENCE(WordNode* A, WordNode* B);
 
 
 void to_lower_str(char* word);

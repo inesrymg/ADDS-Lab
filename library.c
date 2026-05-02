@@ -6,12 +6,43 @@
 #include "library.h"
 // Abstract Machine - Binary Search Tree (Word Set)
 
+char* node_value(WordNode* node) {
+    if (node == NULL) return NULL;
+    return node->word;
+}
+
+WordNode* LC(WordNode* node) {
+    if (node == NULL) return NULL;
+    return node->left;
+}
+
+WordNode* RC(WordNode* node) {
+    if (node == NULL) return NULL;
+    return node->right;
+}
+
+void ass_val(WordNode* node, char* word) {
+    if (node == NULL) return;
+    strncpy(node->word, word, 49);
+    node->word[49] = '\0';
+}
+
+void ass_LC(WordNode* node, WordNode* left_child) {
+    if (node == NULL) return;
+    node->left = left_child;
+}
+
+void ass_RC(WordNode* node, WordNode* right_child) {
+    if (node == NULL) return;
+    node->right = right_child;
+}
+
+
 WordNode* create_bst_NW(char* word) {
     WordNode* p = (WordNode*)malloc(sizeof(WordNode));
-    strncpy(p->word, word, 49);
-    p->word[49] = '\0';
-    p->left = NULL;
-    p->right = NULL;
+    ass_val(p, word);
+    ass_LC(p, NULL);
+    ass_RC(p, NULL);
     return p;
 } // Create and return a new isolated node containing word
 
@@ -20,21 +51,24 @@ void free_bst(WordNode* R) {
     free_bst(R->left);
     free_bst(R->right);
     free(R);
-} // Free the entire BST and all its nodes : postorder
+} // Frees children before parent so we never lose access to any node
 
 WordNode* insert_bst_NW(WordNode* R, char* word) {
     if (R == NULL) return create_bst_NW(word);
 
-    int cmp = strcmp(word, R->word);
+    int cmp = strcmp(word, R->word); // this function compares two strings lexicographically 
+    // if cmp = 0 the strings are equal
+    // if cmp < 0 the first string is less than the second one
+    // if cmp > 0 the first string is greater than the second one
 
-    if (cmp == 0) return R; // Word already exists, the tree is unchanged
+    if (cmp == 0) return R; 
     else if (cmp < 0)
-        R->left = insert_bst_NW(R->left, word);
+        ass_LC(R, insert_bst_NW(LC(R), word));
     else
-        R->right = insert_bst_NW(R->right, word);
+        ass_RC(R, insert_bst_NW(RC(R), word));
 
     return R;
-} // Insert word into the BST rooted at R
+} 
 
 bool search_bst(WordNode* R, char* word) {
     if (R == NULL) return false;
@@ -43,84 +77,107 @@ bool search_bst(WordNode* R, char* word) {
 
     if (cmp == 0) return true;
     else if (cmp < 0)
-        return search_bst(R->left, word);
+        return search_bst(LC(R), word);
     else
-        return search_bst(R->right, word);
-} // Search for word in the BST rooted at R, returns true if found and false otherwise
+        return search_bst(RC(R), word);
+} 
+
 
 WordNode* copy_bst(WordNode* R) {
     if (R == NULL) return NULL;
 
-    WordNode* new_node = create_bst_NW(R->word);
-    new_node->left = copy_bst(R->left);
-    new_node->right = copy_bst(R->right);
+    WordNode* new_node = create_bst_NW(node_value(R));
+    ass_LC(new_node, copy_bst(LC(R)));
+    ass_RC(new_node, copy_bst(RC(R)));
 
     return new_node;
 } // Create and return a deep copy of the BST rooted at R : preorder
 
 void inorder_traversal(WordNode* R) {
     if (R == NULL) return;
-    inorder_traversal(R->left);
-    printf("%s , ", R->word);
-    inorder_traversal(R->right);
+    inorder_traversal(LC(R));
+    printf("%s , ", node_value(R));
+    inorder_traversal(RC(R));
 } // Perform an in-order traversal of the BST rooted at R, printing each word followed by a comma and space
 
 
 // Abstract Machine - Paragraph List (Linked List of Word Sets)
 
+int para_id(ParaNode* node) {
+    if (node == NULL) return -1;
+    return node->para_id;
+}
+
+WordNode* word_set(ParaNode* node) {
+    if (node == NULL) return NULL;
+    return node->word_set;
+}
+
+ParaNode* next_para(ParaNode* node) {
+    if (node == NULL) return NULL;
+    return node->next;
+}
+
+void ass_para_id(ParaNode* node, int id) {
+    if (node == NULL) return;
+    node->para_id = id;
+}
+
+void ass_word_set(ParaNode* node, WordNode* ws) {
+    if (node == NULL) return;
+    node->word_set = ws;
+}
+
+void ass_next(ParaNode* node, ParaNode* next) {
+    if (node == NULL) return;
+    node->next = next;
+}
+
 ParaList* create_para_list() {
     ParaList* list = (ParaList*)malloc(sizeof(ParaList));
     list->head = NULL;
     return list;
-} // Create and return an empty paragraph list
+} 
 
-void insert_para_list(ParaList* list, WordNode* para, int id, char** lines, int line_count) {
+void insert_para(ParaList* list, WordNode* para, int id, char** lines, int line_count)
+// adds a new paragraph at the beginning of the LL
+{
     ParaNode* new_node = (ParaNode*)malloc(sizeof(ParaNode));
 
-    new_node->para_id = id;
-    new_node->word_set = para;
+    ass_para_id(new_node, id);
+    ass_word_set(new_node, para);
     new_node->lines = lines;
     new_node->line_count = line_count;
-    new_node->next = list->head;
+    ass_next(new_node, list->head);
 
     list->head = new_node;
-} // Insert a new paragraph (WordNode) at the beginning of the paragraph list
+} 
 
-ParaNode* get_para(ParaList* list, int para_id) {
+ParaNode* get_para(ParaList* list, int id)
+// searches for a paragraph in the LL
+{
     ParaNode* current = list->head;
 
     while (current != NULL) {
-        if (current->para_id == para_id) {
+        if (id == para_id(current)) {
             return current;
         }
-        current = current->next;
+        current = next_para(current);
     }
 
     return NULL; // Return NULL if no paragraph with the given ID is found
-} // Retrieve the paragraph node with the specified para_id from the paragraph list, returns NULL if not found
-
-void print_para_list(ParaList* list) {
-    ParaNode* current = list->head;
-
-    while (current != NULL) {
-        printf("Paragraph ID: %d\n", current->para_id);
-        printf("Words: ");
-        inorder_traversal(current->word_set);
-        printf("\n");
-
-        current = current->next;
-    }
-} // Print the contents of the paragraph list, including each paragraph's ID and its associated words
+}  
 
 void free_para_list(ParaList* list) {
     ParaNode* current = list->head;
+
     while (current != NULL) {
-        ParaNode* temp = current;
-        current = current->next;
-        free_bst(temp->word_set);
-        for (int i = 0; i < temp->line_count; i++) free(temp->lines[i]);
-        free(temp->lines); // Free the BST associated with the paragraph
-        free(temp); // Free the paragraph node
+        ParaNode* tmp = current;
+        current = next_para(current);
+        free_bst(word_set(tmp)); // free the bst of words for the paragraph
+        for (int i = 0; i < tmp->line_count; i++) free(tmp->lines[i]); // free each line
+        free(tmp->lines); 
+        free(tmp); // Free the paragraph node
     }
 
     free(list); // Free the paragraph list itself
@@ -131,17 +188,29 @@ ParaList* copy_para_list(ParaList* list) {
     ParaNode* current = list->head;
 
     while (current != NULL) {
-        WordNode* copied_para = copy_bst(current->word_set);// Deep copy the BST for the paragraph
-      // Deep copy the lines array
+        WordNode* copied_para = copy_bst(word_set(current));
         char** copied_lines = (char**)malloc(current->line_count * sizeof(char*));
         for (int i = 0; i < current->line_count; i++)
             copied_lines[i] = strdup(current->lines[i]);
-        insert_para_list(new_list, copied_para, current->para_id, copied_lines, current->line_count); // Insert the copied paragraph into the new list
-        current = current->next;
+        insert_para(new_list, copied_para, para_id(current), copied_lines, current->line_count); // Insert the copied paragraph into the new list
+        current = next_para(current);
     }
 
-    return new_list; // Return the new paragraph list which is a deep copy of the original
-} // Create and return a deep copy of the given paragraph list, including deep copies of all paragraphs and their word sets
+    return new_list; // copy 
+} 
+
+void print_para_list(ParaList* list) {
+    ParaNode* current = list->head;
+
+    while (current != NULL) {
+        printf("Paragraph ID: %d\n", para_id(current));
+        printf("Words: ");
+        inorder_traversal(word_set(current));
+        printf("\n");
+
+        current = next_para(current);
+    }
+}
 
 // -------- useful --------
 
@@ -190,7 +259,7 @@ ParaList* para_list_load(const char* filename) {
 
         if (line[0] == '\0') {
             if (current_para != NULL) {
-                insert_para_list(list, current_para, para_id++, current_lines, current_line_count);
+                insert_para(list, current_para, para_id++, current_lines, current_line_count);
                 current_para = NULL;
                 current_lines = NULL;
                 current_line_count = 0;
@@ -217,7 +286,7 @@ ParaList* para_list_load(const char* filename) {
     }
 
     if (current_para != NULL)
-        insert_para_list(list, current_para, para_id, current_lines, current_line_count);
+        insert_para(list, current_para, para_id, current_lines, current_line_count);
 
     fclose(file);
     return list;
