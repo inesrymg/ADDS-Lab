@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include "library.h"
+
 // Abstract Machine - Binary Search Tree (Word Set)
 
 char* node_value(WordNode* node) {
@@ -82,7 +83,6 @@ bool search_bst(WordNode* R, char* word) {
         return search_bst(RC(R), word);
 } 
 
-
 WordNode* copy_bst(WordNode* R) {
     if (R == NULL) return NULL;
 
@@ -100,12 +100,16 @@ void inorder_traversal(WordNode* R) {
     inorder_traversal(RC(R));
 } // Perform an in-order traversal of the BST rooted at R, printing each word followed by a comma and space
 
+int count_words(WordNode* R) {
+    if (R == NULL) return 0;
+    return 1 + count_words(LC(R)) + count_words(RC(R));
+}
 
 // Abstract Machine - Paragraph List (Linked List of Word Sets)
 
-int para_id(ParaNode* node) {
+int para_num(ParaNode* node) {
     if (node == NULL) return -1;
-    return node->para_id;
+    return node->para_num;
 }
 
 WordNode* word_set(ParaNode* node) {
@@ -118,9 +122,9 @@ ParaNode* next_para(ParaNode* node) {
     return node->next;
 }
 
-void ass_para_id(ParaNode* node, int id) {
+void ass_para_num(ParaNode* node, int num) {
     if (node == NULL) return;
-    node->para_id = id;
+    node->para_num = num;
 }
 
 void ass_word_set(ParaNode* node, WordNode* ws) {
@@ -139,12 +143,12 @@ ParaList* create_para_list() {
     return list;
 } 
 
-void insert_para(ParaList* list, WordNode* para, int id, char** lines, int line_count)
+void insert_para(ParaList* list, WordNode* para, int num, char** lines, int line_count)
 // adds a new paragraph at the beginning of the LL
 {
     ParaNode* new_node = (ParaNode*)malloc(sizeof(ParaNode));
 
-    ass_para_id(new_node, id);
+    ass_para_num(new_node, num);
     ass_word_set(new_node, para);
     new_node->lines = lines;
     new_node->line_count = line_count;
@@ -153,13 +157,13 @@ void insert_para(ParaList* list, WordNode* para, int id, char** lines, int line_
     list->head = new_node;
 } 
 
-ParaNode* get_para(ParaList* list, int id)
+ParaNode* get_para(ParaList* list, int num)
 // searches for a paragraph in the LL
 {
     ParaNode* current = list->head;
 
     while (current != NULL) {
-        if (id == para_id(current)) {
+        if (num == para_num(current)) {
             return current;
         }
         current = next_para(current);
@@ -192,18 +196,18 @@ ParaList* copy_para_list(ParaList* list) {
         char** copied_lines = (char**)malloc(current->line_count * sizeof(char*));
         for (int i = 0; i < current->line_count; i++)
             copied_lines[i] = strdup(current->lines[i]);
-        insert_para(new_list, copied_para, para_id(current), copied_lines, current->line_count); // Insert the copied paragraph into the new list
+        insert_para(new_list, copied_para, para_num(current), copied_lines, current->line_count); // Insert the copied paragraph into the new list
         current = next_para(current);
     }
 
-    return new_list; // copy 
+    return new_list; 
 } 
 
 void print_para_list(ParaList* list) {
     ParaNode* current = list->head;
 
     while (current != NULL) {
-        printf("Paragraph ID: %d\n", para_id(current));
+        printf("Paragraph number: %d\n", para_num(current));
         printf("Words: ");
         inorder_traversal(word_set(current));
         printf("\n");
@@ -212,34 +216,14 @@ void print_para_list(ParaList* list) {
     }
 }
 
-// -------- useful --------
+int count_paragraphs(ParaList* list) {
+    int n = 0;
+    ParaNode* current = list->head;
+    while (current != NULL) { n++; current = current->next; }
+    return n;
+}
 
-void to_lower_str(char* word) {
-    for (int i = 0; word[i]; i++) {
-        word[i] = tolower(word[i]);
-    }
-} // Convert all characters in word to lowercase
-
-void remove_punct(char* word) {
-    int j = 0;
-
-    for (int i = 0; word[i]; i++) {
-        if (word[i] == '\'' && i > 0 && isalpha(word[i-1])) {
-            word[j++] = word[i];
-        } else if (!ispunct(word[i])) {
-            word[j++] = word[i];
-        }
-    }
-    word[j] = '\0';
-} // Remove all punctuation characters from word
-
-int normalise_word(char* word) {
-    remove_punct(word);
-    to_lower_str(word);
-    return strlen(word);
-} // Normalize word by removing punctuation and converting to lowercase, returns the length of the normalized word
-
-ParaList* para_list_load(const char* filename) {
+ParaList* para_list_load(const char* filename) { // loading the file
     FILE* file = fopen(filename, "r");
     if (!file) {
         fprintf(stderr, "Error: could not open file '%s'\n", filename);
@@ -290,9 +274,39 @@ ParaList* para_list_load(const char* filename) {
 
     fclose(file);
     return list;
-} //loading the files
+} 
+
+
+// -------- useful --------
+
+void to_lower_str(char* word) {
+    for (int i = 0; word[i]; i++) {
+        word[i] = tolower(word[i]);
+    }
+} 
+void remove_punct(char* word) {
+    int j = 0;
+
+    for (int i = 0; word[i]; i++) {
+        if (word[i] == '\'' && i > 0 && isalpha(word[i-1])) {
+            word[j++] = word[i];
+        } else if (!ispunct(word[i])) {
+            word[j++] = word[i];
+        }
+    }
+    word[j] = '\0';
+} 
+
+int normalise_word(char* word) {
+    remove_punct(word);
+    to_lower_str(word);
+    return strlen(word);
+} // Normalize word by removing punctuation and converting to lowercase
+// returns the length of the normalized word
+
 
 // -------- SET OPERATIONS --------
+
 WordNode* copy_into(WordNode* A, WordNode* B) {
     if (A == NULL) return B;
 
@@ -301,14 +315,14 @@ WordNode* copy_into(WordNode* A, WordNode* B) {
     B = copy_into(A->right, B);
 
     return B;
-} // Copy all words from BST A into BST B
+} 
 
 WordNode* UNION(WordNode* A, WordNode* B) {
     WordNode* unionTree = NULL;
     unionTree = copy_into(A, unionTree);
     unionTree = copy_into(B, unionTree);
     return unionTree;
-} // Return the union of two BSTs A and B
+} 
 
 WordNode* common_words(WordNode* A, WordNode* B, WordNode* result) {
     if (A == NULL) return result;
@@ -317,13 +331,13 @@ WordNode* common_words(WordNode* A, WordNode* B, WordNode* result) {
     result = common_words(A->left, B, result);
     result = common_words(A->right, B, result);
     return result;
-} // Collect common words between BST A and B
+} 
 
 WordNode* INTERSECTION(WordNode* A, WordNode* B) {
     WordNode* interTree = NULL;
     interTree = common_words(A, B, interTree);
     return interTree;
-} // Return the intersection of two BSTs A and B
+} 
 
 WordNode* diff_words(WordNode* A, WordNode* B, WordNode* result) {
     if (A == NULL) return result;
@@ -335,12 +349,12 @@ WordNode* diff_words(WordNode* A, WordNode* B, WordNode* result) {
     result = diff_words(A->right, B, result);
 
     return result;
-} // Collect words in A that are not in B
+} 
 
 WordNode* DIFFERENCE(WordNode* A, WordNode* B) {
     WordNode* diffTree = NULL;
     diffTree = diff_words(A, B, diffTree);
     return diffTree;
-} // Return the difference of two BSTs A and B
+} 
 
 

@@ -1,0 +1,11 @@
+Computers process information using binary code of ones and zeros.
+They store data in memory and execute instructions very quickly.
+Modern computers are used in science, medicine, and communication.
+
+The internet connects millions of computers around the world.
+It allows people to share information and communicate instantly.
+Data travels through cables and wireless signals across the globe.
+
+Artificial intelligence allows machines to learn from data.
+It is used in image recognition, language processing, and more.
+Many scientists believe AI will transform the world in the future.
