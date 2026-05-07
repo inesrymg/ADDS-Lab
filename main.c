@@ -54,6 +54,7 @@ int read_int(const char* prompt, int* out) {
 
 // Display persistent status bar
 void print_status_bar() {
+    printf("\n");
     printf("+-- STATUS [Files: %d loaded] [Operation: %s] [Result: %s] ---+\n",
            file_count,
            current_op == '\0' ? "none"
@@ -385,6 +386,7 @@ int menu_result() {
 // --- Main menu -----------------------------------------------
 
 int main(void) {
+    printf("\n");
     printf("\n");
     printf("===============================================\n");
     printf("  WELCOME TO TEXT SET OPERATIONS TOOL\n");
