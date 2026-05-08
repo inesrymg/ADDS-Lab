@@ -30,15 +30,12 @@
 #define RST   "\033[0m"
 #define BOLD  "\033[1m"
 
-// Primary palette
 #define CYN   "\033[0;36m"    // cyan   
 #define BCYN  "\033[1;36m"    // bold cyan
 #define GLD   "\033[0;33m"    // gold   
 #define BGLD  "\033[1;33m"    // bold gold
 #define MGT   "\033[0;35m"    // magenta 
 #define BMGT  "\033[1;35m"    // bold magenta
-
-// Supporting
 #define GRN   "\033[0;92m"    // bright green
 #define SGRN  "\033[0;32m"    // soft green   
 #define RED   "\033[0;31m"    // red          
@@ -66,7 +63,12 @@
 #define SRT "┤"
 
 // Width of all menus 
-#define W 62
+#define W 70
+
+ #define SW (W + 20)   /* status-bar width — wider than menus */
+
+
+#define VENN_W 95
 
 // Helpers to print padded box rows without ANSI-width bugs
 
@@ -98,17 +100,37 @@ static void print_indent(int n) {
     for (int i = 0; i < n; i++) putchar(' ');
 }
 
+// Helper: count visible characters only (skip ANSI escape sequences)
+static int visible_len(const char* s) {
+    int len = 0;
+    while (*s) {
+        if (*s == '\033') {
+            // skip ANSI escape sequence until 'm'
+            while (*s && *s != 'm') s++;
+            if (*s) s++;
+        } else if ((unsigned char)*s >= 0x80) {
+            // UTF-8 multi-byte character
+            if ((unsigned char)*s >= 0xC0) len++; // only leading byte counts as 1 column
+            s++;
+        } else {
+            // normal ASCII character
+            len++;
+            s++;
+        }
+    }
+    return len;
+}
+
 static void row(const char* col, const char* text, int content_w) {
-    int len = (int)strlen(text);
+    int len = visible_len(text);   // ← was strlen(text)
     int pad = content_w - len;
     if (pad < 0) pad = 0;
     print_indent(frame_margin());
     printf(CYN VL RST " %s%s%s%*s " CYN VL RST "\n", col, text, RST, pad, "");
 }
 
-// Same but text is centred
 static void rowc(const char* col, const char* text, int content_w) {
-    int len   = (int)strlen(text);
+    int len   = visible_len(text); // ← was strlen(text)
     int total = content_w - len;
     int lpad  = total / 2;
     int rpad  = total - lpad;
@@ -116,7 +138,6 @@ static void rowc(const char* col, const char* text, int content_w) {
     printf(CYN VL RST "%*s%s%s%s%*s" CYN VL RST "\n",
            lpad + 1, "", col, text, RST, rpad + 1, "");
 }
-
 
 static void top_rule(void) {
     print_indent(frame_margin());
@@ -224,36 +245,28 @@ void printESI(void) {
     top_rule();
     rowc(BGLD, "WELCOME TO THE TEXT SET OPERATIONS LAB", W - 2);
     mid_rule();
-        sleep_ms(80);
+    sleep_ms(80);
     blank_row();
     rowc(MGT,  "Algorithmics & Dynamic Data Structures", W - 2);
-        sleep_ms(70);
+    sleep_ms(70);
     blank_row();
-    rowc(WHT,  "This tool lets you load text files, decompose them into", W - 2);
-        sleep_ms(60);
-    rowc(WHT,  "paragraph word sets (stored as BSTs), then chain set", W - 2);
-        sleep_ms(60);
-    rowc(WHT,  "operations — Union, Intersection, Difference — across", W - 2);
-        sleep_ms(60);
-    rowc(WHT,  "any combination of paragraphs from any loaded file.", W - 2);
+    rowc(WHT, "This tool lets you load text files, decompose them into", W - 2);
+    sleep_ms(60);
+    rowc(WHT, "paragraph word sets (stored as BSTs), then chain set", W - 2);
+    sleep_ms(60);
+    rowc(WHT, "operations — Union, Intersection, Difference — across", W - 2);
+    sleep_ms(60);
+    rowc(WHT, "any combination of paragraphs from any loaded file.", W - 2);
     blank_row();
     sep_row();
     blank_row();
-
-        print_indent(frame_margin());
-    printf(CYN VL RST "  " GLD "Supervised by  " RST WHT ":  " BCYN "Dr. KERMI ADEL" RST
-           "%*s" CYN VL RST "\n", W - 34, "");
-        print_indent(frame_margin());
-    printf(CYN VL RST "  " GLD "Authors        " RST WHT ":  " MGT  "GHEDBANE Ines Rym   &   AGGOUN Houcine" RST
-           "%*s" CYN VL RST "\n", W - 57, "");
-        print_indent(frame_margin());
-    printf(CYN VL RST "  " GLD "Academic Year  " RST WHT ":  " GRN  "2025 / 2026" RST
-           "%*s" CYN VL RST "\n", W - 31, "");
-
+    row(GLD,  "  Supervised by  :  Dr. KERMI ADEL", W - 2);
+    row(MGT,  "  Authors        :  GHEDBANE Ines Rym  &  AGGOUN Houcine", W - 2);
+    row(GRN,  "  Academic Year  :  2025 / 2026", W - 2);
     blank_row();
     bot_rule();
 
-    printf("\n" RED "              Please — Press Enter to begin..." RST "  ");
+    printf("\n" RED "  Please — Press Enter to begin..." RST "  ");
     getchar();
     clrscr();
 }
@@ -290,46 +303,123 @@ void print_exit_animation(void) {
 // ─────────────────────────────────────────────────────────────
 
 void print_status_bar(void) {
-    int all_ready = (file_count > 0) && (current_op != '\0') && (result != NULL);
-
-    const char* op_str =
+    char files_str[32], op_str[32], res_str[32];
+ 
+    if (file_count > 0) snprintf(files_str, sizeof(files_str), "%d loaded", file_count);
+    else                snprintf(files_str, sizeof(files_str), "none");
+ 
+    const char* op_name =
         current_op == 'U' ? "UNION" :
         current_op == 'I' ? "INTERSECTION" :
-        current_op == 'D' ? "DIFFERENCE"   : "none";
-
-    const char* op_col = (current_op == '\0') ? GRY : BMGT;
-    const char* bar_col = all_ready ? SGRN : GLD;
-
-    char files_str[32], op_disp[32], res_str[32];
-    if (file_count > 0)
-        snprintf(files_str, sizeof(files_str), "%d loaded", file_count);
-    else
-        snprintf(files_str, sizeof(files_str), "none");
-
-    snprintf(op_disp,  sizeof(op_disp),  "%s", op_str);
-
-    if (result != NULL)
-        snprintf(res_str, sizeof(res_str), "%d word%s",
-                 count_words(result), count_words(result) == 1 ? "" : "s");
-    else
-        snprintf(res_str, sizeof(res_str), "—");
-
-    int cw = (W - 6) / 3;  
-
-    top_rule();
-
-    // Row: ║  Files: X  ║  Operation: X  ║  Result: X  ║
+        current_op == 'D' ? "DIFFERENCE" : "none";
+    snprintf(op_str, sizeof(op_str), "%s", op_name);
+ 
+    if (result) snprintf(res_str, sizeof(res_str), "%d word%s",
+                         count_words(result), count_words(result) == 1 ? "" : "s");
+    else        snprintf(res_str, sizeof(res_str), "--");
+ 
+    const char* op_col  = (current_op == '\0') ? GRY : BMGT;
+    const char* res_col = (result != NULL)      ? SGRN : GRY;
+ 
+    /* each section gets this many chars of plain-text content */
+    int cw = (SW - 8) / 3;   /* 8 = 3 separators (║) × 2 spaces + 2 outer spaces */
+ 
+    /* build plain strings for each cell so we can pad correctly */
+    char cell_f[64], cell_o[64], cell_r[64];
+    snprintf(cell_f, sizeof(cell_f), "Files: %s",     files_str);
+    snprintf(cell_o, sizeof(cell_o), "Operation: %s", op_str);
+    snprintf(cell_r, sizeof(cell_r), "Result: %s",    res_str);
+ 
+    /* top border */
+    print_indent(frame_margin());
+    printf(CYN TL);
+    for (int i = 0; i < SW; i++) printf(HL);
+    printf(TR RST "\n");
+ 
+    /* single content row */
     print_indent(frame_margin());
     printf(CYN VL RST);
-    printf("  " GLD "Files" RST ": %s%-*s" RST, bar_col, cw - 7, files_str);
+ 
+    /* cell 1 — Files */
+    printf("  " GLD "Files" RST ": %s%-*s" RST,
+           file_count > 0 ? SGRN : GRY,
+           cw - 7,   /* 7 = len("Files: ") */
+           files_str);
+ 
     printf(CYN VL RST);
-    printf("  " GLD "Operation" RST ": %s%-*s" RST, op_col, cw - 12, op_disp);
+ 
+    /* cell 2 — Operation */
+    printf("  " GLD "Operation" RST ": %s%-*s" RST,
+           op_col,
+           cw - 11,  /* 11 = len("Operation: ") */
+           op_str);
+ 
     printf(CYN VL RST);
-    printf("  " GLD "Result" RST ": %s%-*s" RST, MGT, cw - 9, res_str);
+ 
+    /* cell 3 — Result */
+    printf("  " GLD "Result" RST ": %s%-*s" RST,
+           res_col,
+           cw - 8,   /* 8 = len("Result: ") */
+           res_str);
+ 
     printf(CYN VL RST "\n");
-
-    bot_rule();
+ 
+    /* bottom border */
+    print_indent(frame_margin());
+    printf(CYN BL);
+    for (int i = 0; i < SW; i++) printf(HL);
+    printf(BR RST "\n");
+ 
     printf("\n");
+}
+
+
+// ────────────────────────────────────────────────────────────
+// WORD DISPLAY
+// ────────────────────────────────────────────────────────────
+
+static void print_words_wrapped(WordNode* R, int content_w) {
+    int total = count_words(R);
+    if (total == 0) return;
+
+    char** words = malloc(total * sizeof(char*));
+    int n = 0;
+    WordNode* stack[512];
+    int top = 0;
+    WordNode* cur = R;
+    while (cur || top > 0) {
+        while (cur) { stack[top++] = cur; cur = cur->left; }
+        cur = stack[--top];
+        words[n++] = cur->word;
+        cur = cur->right;
+    }
+
+    // Build lines of plain text, then print each via row()
+    char line[256];
+    line[0] = '\0';
+    int col = 0;
+
+    for (int i = 0; i < n; i++) {
+        char token[64];
+        if (i < n - 1)
+            snprintf(token, sizeof(token), "%s , ", words[i]);
+        else
+            snprintf(token, sizeof(token), "%s", words[i]);
+
+        int tlen = (int)strlen(token);
+
+        if (col + tlen > content_w - 4 && col > 0) {
+            // flush current line
+            row(BMGT, line, content_w);
+            line[0] = '\0';
+            col = 0;
+        }
+        strncat(line, token, sizeof(line) - strlen(line) - 1);
+        col += tlen;
+    }
+    if (col > 0) row(BMGT, line, content_w);  // flush last line
+
+    free(words);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -356,11 +446,10 @@ void print_para_card(ParaNode* node, int fi) {
     for (int i = 0; i < W - 2; i++) printf(SHL);
     printf(SRT RST "\n");
 
-    print_indent(frame_margin());
-    printf(CYN SVL RST "  " BMGT "Word set " GRY "(%d unique word%s)" RST ":  ",
-           wc, wc == 1 ? "" : "s");
-    inorder_traversal(word_set(node));
-    printf("\n");
+     char wlabel[64];
+    snprintf(wlabel, sizeof(wlabel), "Word set (%d unique word%s):", wc, wc == 1 ? "" : "s");
+    row(BMGT, wlabel, W - 2);
+    print_words_wrapped(word_set(node), W - 2);
 
     print_indent(frame_margin());
     printf(CYN SBL);
@@ -420,12 +509,11 @@ void print_word_grid(WordNode* R) {
 // ─────────────────────────────────────────────────────────────
 //  VENN DIAGRAM
 // ─────────────────────────────────────────────────────────────
-
 void print_venn(char op, int a_only, int shared, int b_only) {
     const char* op_name =
         op == 'U' ? "UNION" : op == 'I' ? "INTERSECTION" : "DIFFERENCE";
     const char* op_sym  =
-        op == 'U' ? "A \xe2\x88\xaa B" : op == 'I' ? "A \xe2\x88\xa9 B" : "A \\ B";
+        op == 'U' ? "A u B" : op == 'I' ? "A n B" : "A \\ B";
 
     int result_size =
         op == 'U' ? a_only + shared + b_only :
@@ -433,68 +521,41 @@ void print_venn(char op, int a_only, int shared, int b_only) {
 
     printf("\n");
     top_rule();
-
     char title[64];
-    snprintf(title, sizeof(title), "SET OPERATION DIAGRAM  \xe2\x80\x94  %s", op_name);
+    snprintf(title, sizeof(title), "SET OPERATION DIAGRAM  --  %s", op_name);
     rowc(BGLD, title, W - 2);
     mid_rule();
     blank_row();
 
-        print_indent(frame_margin());
-    printf(CYN VL RST "    " GLD  "  \xe2\x95\xad\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x95\xae" RST
-           "     " MGT "\xe2\x95\xad\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x95\xae" RST
-           "        " CYN VL RST "\n");
+    // Draw the venn using row() so right border is always correct
+    row(GLD,  "   .----------------------.     .----------------------.", W - 2);
+    row(GLD,  "   |    A                 |     |           B         |", W - 2);
 
-        print_indent(frame_margin());
-    printf(CYN VL RST "    " GLD "\xe2\x94\x82  A  only" RST
-           "                    " BCYN "\xe2\x95\x94\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x97" RST
-           "                    " MGT "\xe2\x94\x82  B  only" RST
-           "         " CYN VL RST "\n");
+    char line1[64];
+    snprintf(line1, sizeof(line1), "   |                    | %-5d |                    |", shared);
+    row(GLD, line1, W - 2);
 
-        print_indent(frame_margin());
-    printf(CYN VL RST "    " GLD "\xe2\x94\x82" RST
-           "                     " BCYN "\xe2\x95\x91" RST " " BCYN "\xe2\x95\x91" RST
-           "                     " MGT "\xe2\x94\x82" RST
-           "         " CYN VL RST "\n");
+    char line2[64];
+    snprintf(line2, sizeof(line2), "   |   %-5d            |  A%cB |            %-5d   |",
+             a_only, op == 'U' ? 'u' : op == 'I' ? 'n' : '\\', b_only);
+    row(GLD, line2, W - 2);
 
-        print_indent(frame_margin());
-    printf(CYN VL RST "    " GLD "\xe2\x94\x82     " RST);
-    printf(GLD "%5d" RST, a_only);
-    printf("               " BCYN "\xe2\x95\x91" RST);
-    printf(BCYN " %3d " RST, shared);
-    printf(BCYN "\xe2\x95\x91" RST);
-    printf("               " MGT "%5d" RST, b_only);
-    printf(MGT "     \xe2\x94\x82" RST "         " CYN VL RST "\n");
-
-        print_indent(frame_margin());
-    printf(CYN VL RST "    " GLD "\xe2\x94\x82" RST
-           "                     " BCYN "\xe2\x95\x91" RST " " BCYN "\xe2\x95\x91" RST
-           "                     " MGT "\xe2\x94\x82" RST
-           "         " CYN VL RST "\n");
-
-        print_indent(frame_margin());
-    printf(CYN VL RST "    " GLD "\xe2\x94\x82  A  only" RST
-           "                    " BCYN "\xe2\x95\x9a\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x9d" RST
-           "                    " MGT "\xe2\x94\x82  B  only" RST
-           "         " CYN VL RST "\n");
-
-        print_indent(frame_margin());
-    printf(CYN VL RST "    " GLD "  \xe2\x95\xb0\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x95\xaf" RST
-           "     " MGT "\xe2\x95\xb0\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x95\xaf" RST
-           "        " CYN VL RST "\n");
+    row(GLD,  "   |                    |       |                    |", W - 2);
+    row(GLD,  "   |                    |       |                    |", W - 2);
+    row(GLD,  "   `----------------------'     `----------------------'", W - 2);
 
     blank_row();
     sep_row();
 
     char stat[80];
-    snprintf(stat, sizeof(stat), "Operation: %s     Formula: %s     |result| = %d word%s",
+    snprintf(stat, sizeof(stat),
+             "Operation: %s   Formula: %s   |result| = %d word%s",
              op_name, op_sym, result_size, result_size == 1 ? "" : "s");
     row(GLD, stat, W - 2);
 
     bot_rule();
     printf("\n");
 }
-
 // ─────────────────────────────────────────────────────────────
 //  LOADED FILES LIST
 // ─────────────────────────────────────────────────────────────
