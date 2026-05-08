@@ -100,6 +100,13 @@ static void print_indent(int n) {
     for (int i = 0; i < n; i++) putchar(' ');
 }
 
+static int status_frame_margin(int sw) {
+    int total_w = sw + 2;
+    int term_w  = get_terminal_width();
+    int pad     = (term_w - total_w) / 2;
+    return pad > 0 ? pad : 0;
+}
+
 // Helper: count visible characters only (skip ANSI escape sequences)
 static int visible_len(const char* s) {
     int len = 0;
@@ -285,12 +292,8 @@ void print_exit_animation(void) {
     blank_row();
     rowc(WHT,  "Thank you for using the Text Set Operations Lab.", W - 2);
     blank_row();
-        print_indent(frame_margin());
-    printf(CYN VL RST "  " GLD "Supervised by  " RST WHT ":  " BCYN "Dr. KERMI ADEL" RST
-           "%*s" CYN VL RST "\n", W - 34, "");
-        print_indent(frame_margin());
-    printf(CYN VL RST "  " GLD "Authors        " RST WHT ":  " MGT  "GHEDBANE Ines Rym   &   AGGOUN Houcine" RST
-           "%*s" CYN VL RST "\n", W - 57, "");
+    row(GLD,  "  Supervised by  :  " BCYN "Dr. KERMI ADEL", W - 2);
+    row(GLD,  "  Authors        :  " MGT  "GHEDBANE Ines Rym   &   AGGOUN Houcine", W - 2);
     blank_row();
     rowc(SGRN, "Goodbye!", W - 2);
     blank_row();
@@ -304,72 +307,65 @@ void print_exit_animation(void) {
 
 void print_status_bar(void) {
     char files_str[32], op_str[32], res_str[32];
- 
+
     if (file_count > 0) snprintf(files_str, sizeof(files_str), "%d loaded", file_count);
     else                snprintf(files_str, sizeof(files_str), "none");
- 
+
     const char* op_name =
         current_op == 'U' ? "UNION" :
         current_op == 'I' ? "INTERSECTION" :
         current_op == 'D' ? "DIFFERENCE" : "none";
     snprintf(op_str, sizeof(op_str), "%s", op_name);
- 
+
     if (result) snprintf(res_str, sizeof(res_str), "%d word%s",
                          count_words(result), count_words(result) == 1 ? "" : "s");
     else        snprintf(res_str, sizeof(res_str), "--");
- 
+
     const char* op_col  = (current_op == '\0') ? GRY : BMGT;
     const char* res_col = (result != NULL)      ? SGRN : GRY;
- 
-    /* each section gets this many chars of plain-text content */
-    int cw = (SW - 8) / 3;   /* 8 = 3 separators (║) × 2 spaces + 2 outer spaces */
- 
-    /* build plain strings for each cell so we can pad correctly */
+
+    int cw = (SW - 8) / 3;
+    int actual_sw = cw * 3 + 8; 
+
     char cell_f[64], cell_o[64], cell_r[64];
     snprintf(cell_f, sizeof(cell_f), "Files: %s",     files_str);
     snprintf(cell_o, sizeof(cell_o), "Operation: %s", op_str);
     snprintf(cell_r, sizeof(cell_r), "Result: %s",    res_str);
- 
-    /* top border */
-    print_indent(frame_margin());
+
+    /* top border — uses status_frame_margin */
+    print_indent(status_frame_margin(actual_sw));
     printf(CYN TL);
-    for (int i = 0; i < SW; i++) printf(HL);
+    for (int i = 0; i < actual_sw; i++) printf(HL);
     printf(TR RST "\n");
- 
-    /* single content row */
-    print_indent(frame_margin());
+
+    /* content row — uses status_frame_margin */
+    print_indent(status_frame_margin(actual_sw));
     printf(CYN VL RST);
- 
-    /* cell 1 — Files */
+
     printf("  " GLD "Files" RST ": %s%-*s" RST,
            file_count > 0 ? SGRN : GRY,
-           cw - 7,   /* 7 = len("Files: ") */
+           cw - 7,
            files_str);
- 
     printf(CYN VL RST);
- 
-    /* cell 2 — Operation */
+
     printf("  " GLD "Operation" RST ": %s%-*s" RST,
            op_col,
-           cw - 11,  /* 11 = len("Operation: ") */
+           cw - 11,
            op_str);
- 
     printf(CYN VL RST);
- 
-    /* cell 3 — Result */
+
     printf("  " GLD "Result" RST ": %s%-*s" RST,
            res_col,
-           cw - 8,   /* 8 = len("Result: ") */
+           cw - 8,
            res_str);
- 
     printf(CYN VL RST "\n");
- 
-    /* bottom border */
-    print_indent(frame_margin());
+
+    /* bottom border — uses status_frame_margin */
+    print_indent(status_frame_margin(actual_sw));
     printf(CYN BL);
-    for (int i = 0; i < SW; i++) printf(HL);
+    for (int i = 0; i < actual_sw; i++) printf(HL);
     printf(BR RST "\n");
- 
+
     printf("\n");
 }
 
@@ -395,7 +391,7 @@ static void print_words_wrapped(WordNode* R, int content_w) {
     }
 
     // Build lines of plain text, then print each via row()
-    char line[256];
+    char line[1024];
     line[0] = '\0';
     int col = 0;
 
@@ -406,7 +402,7 @@ static void print_words_wrapped(WordNode* R, int content_w) {
         else
             snprintf(token, sizeof(token), "%s", words[i]);
 
-        int tlen = (int)strlen(token);
+        int tlen = visible_len(token);
 
         if (col + tlen > content_w - 4 && col > 0) {
             // flush current line
@@ -414,7 +410,8 @@ static void print_words_wrapped(WordNode* R, int content_w) {
             line[0] = '\0';
             col = 0;
         }
-        strncat(line, token, sizeof(line) - strlen(line) - 1);
+        size_t rem = sizeof(line) - strlen(line) - 1;
+        strncat(line, token, rem);
         col += tlen;
     }
     if (col > 0) row(BMGT, line, content_w);  // flush last line
@@ -437,9 +434,8 @@ void print_para_card(ParaNode* node, int fi) {
     for (int i = used; i < W - 2; i++) printf(SHL);
     printf(STR RST "\n");
 
-    for (int i = 0; i < node->line_count; i++)
-        print_indent(frame_margin()),
-        printf(CYN SVL RST "   " WHT "%s" RST "\n", node->lines[i]);
+   for (int i = 0; i < node->line_count; i++) {
+    row(WHT, node->lines[i], W - 2); }
 
     print_indent(frame_margin());
     printf(CYN SLT);
@@ -510,49 +506,97 @@ void print_word_grid(WordNode* R) {
 //  VENN DIAGRAM
 // ─────────────────────────────────────────────────────────────
 void print_venn(char op, int a_only, int shared, int b_only) {
+
     const char* op_name =
-        op == 'U' ? "UNION" : op == 'I' ? "INTERSECTION" : "DIFFERENCE";
-    const char* op_sym  =
-        op == 'U' ? "A u B" : op == 'I' ? "A n B" : "A \\ B";
+        op == 'U' ? "UNION" :
+        op == 'I' ? "INTERSECTION" : "DIFFERENCE";
+
+    const char* formula =
+        op == 'U' ? "A \xe2\x88\xaa B" :   /* A ∪ B */
+        op == 'I' ? "A \xe2\x88\xa9 B" :   /* A ∩ B */
+                    "A \\ B";
 
     int result_size =
         op == 'U' ? a_only + shared + b_only :
         op == 'I' ? shared : a_only;
 
+    /* ── title ────────────────────────────────────────────── */
     printf("\n");
     top_rule();
-    char title[64];
-    snprintf(title, sizeof(title), "SET OPERATION DIAGRAM  --  %s", op_name);
+    char title[80];
+    snprintf(title, sizeof(title), "Set Operation Diagram  \xe2\x80\x94  %s", op_name);
     rowc(BGLD, title, W - 2);
     mid_rule();
     blank_row();
 
-    // Draw the venn using row() so right border is always correct
-    row(GLD,  "   .----------------------.     .----------------------.", W - 2);
-    row(GLD,  "   |    A                 |     |           B         |", W - 2);
+    /* ── diagram body ─────────────────────────────────────── *
+     *
+     *  We draw two overlapping rectangles built from ASCII.
+     *  Each row of the diagram is one printf.
+     *
+     *  Layout (all widths in characters, total inner = W-2):
+     *
+     *   |<-------- W-2 chars -------->|
+     *   |  [  A-rect  |overlap| B-rect  ]  |
+     *
+     *  A-rect left edge  : col 4
+     *  overlap left edge : col 24   (right edge of A-rect body)
+     *  overlap right edge: col 34
+     *  B-rect right edge : col 54
+     *
+     *  Rows:
+     *   0  top edges of both rects
+     *   1  side walls + labels row 1  ("A only"  |  |  "B only")
+     *   2  side walls + numbers        (  16      | 7|   18    )
+     *   3  side walls + labels row 2  (empty for clean look)
+     *   4  bottom edges of both rects
+     *
+     * ──────────────────────────────────────────────────────── */
 
-    char line1[64];
-    snprintf(line1, sizeof(line1), "   |                    | %-5d |                    |", shared);
-    row(GLD, line1, W - 2);
+    /* We format each diagram line into a buffer then pass it to rowc.
+       Use snprintf so widths stay exact regardless of number length.   */
 
-    char line2[64];
-    snprintf(line2, sizeof(line2), "   |   %-5d            |  A%cB |            %-5d   |",
-             a_only, op == 'U' ? 'u' : op == 'I' ? 'n' : '\\', b_only);
-    row(GLD, line2, W - 2);
+    char line[256];
 
-    row(GLD,  "   |                    |       |                    |", W - 2);
-    row(GLD,  "   |                    |       |                    |", W - 2);
-    row(GLD,  "   `----------------------'     `----------------------'", W - 2);
+    /* row 0 – top borders
+       A: +-------...   overlap: ---+---   B: ...-------+
+       The overlap corners sit where the two rects cross.          */
+    snprintf(line, sizeof(line),
+        "    +------------------+-------+------------------+    ");
+    rowc(BCYN, line, W - 2);
+
+    /* row 1 – label line */
+    snprintf(line, sizeof(line),
+        "    |    A only        |       |    B only        |    ");
+    rowc(BCYN, line, W - 2);
+
+    /* row 2 – counts.  %-6d / %3d / %-6d keeps columns stable. */
+    snprintf(line, sizeof(line),
+        "    |    %-6d        | %3d   |    %-6d        |    ",
+        a_only, shared, b_only);
+    rowc(BCYN, line, W - 2);
+
+    /* row 3 – empty interior */
+    snprintf(line, sizeof(line),
+        "    |                  |       |                  |    ");
+    rowc(BCYN, line, W - 2);
+
+    /* row 4 – bottom borders (mirror of row 0) */
+    snprintf(line, sizeof(line),
+        "    +------------------+-------+------------------+    ");
+    rowc(BCYN, line, W - 2);
 
     blank_row();
+
+    /* ── legend / formula bar ─────────────────────────────── */
     sep_row();
-
-    char stat[80];
-    snprintf(stat, sizeof(stat),
-             "Operation: %s   Formula: %s   |result| = %d word%s",
-             op_name, op_sym, result_size, result_size == 1 ? "" : "s");
-    row(GLD, stat, W - 2);
-
+    char stats[160];
+    snprintf(stats, sizeof(stats),
+        "Operation : %-14s   Formula : %s   |%s| = %d word%s",
+        op_name, formula, formula,
+        result_size, result_size == 1 ? "" : "s");
+    rowc(GLD, stats, W - 2);
+    blank_row();
     bot_rule();
     printf("\n");
 }
