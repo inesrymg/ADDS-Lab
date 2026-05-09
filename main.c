@@ -1,10 +1,8 @@
-// ============================================================
-//  ADDS Lab - Text Set Operations
-//  Supervised by : Dr. KERMI ADEL
-//  Authors       : GHEDBANE INES RYM  &  AGGOUN HOUCINE
-//  Module        : Algorithmics & Dynamic Data Structures
-//  Academic Year : 2025 / 2026
-// ============================================================
+// ADDS Lab - Text Set Operations
+// Supervised by : Dr. KERMI ADEL
+// Authors       : GHEDBANE INES RYM  &  AGGOUN HOUCINE
+// Module        : Algorithmics & Dynamic Data Structures
+// Academic Year : 2025 / 2026
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,31 +17,30 @@
   #endif
 #else
   #include <unistd.h>
-    #include <sys/ioctl.h>
+  #include <sys/ioctl.h>
   #define sleep_ms(ms) usleep((ms) * 1000)
 #endif
 
 #define MAX_FILES 16
 
-// === Colour macros ===
-
+// ANSI color codes — just shortcuts so printf calls don't look insane
 #define RST   "\033[0m"
 #define BOLD  "\033[1m"
 
-#define CYN   "\033[0;36m"    // cyan   
-#define BCYN  "\033[1;36m"    // bold cyan
-#define GLD   "\033[0;33m"    // gold   
-#define BGLD  "\033[1;33m"    // bold gold
-#define MGT   "\033[0;35m"    // magenta 
-#define BMGT  "\033[1;35m"    // bold magenta
-#define GRN   "\033[0;92m"    // bright green
-#define SGRN  "\033[0;32m"    // soft green   
-#define RED   "\033[0;31m"    // red          
-#define WHT   "\033[0;97m"    // white        
-#define GRY   "\033[0;90m"    // dark grey    
-#define IGRY  "\033[2;37m"    // dim grey     
+#define CYN   "\033[0;36m"
+#define BCYN  "\033[1;36m"
+#define GLD   "\033[0;33m"
+#define BGLD  "\033[1;33m"
+#define MGT   "\033[0;35m"
+#define BMGT  "\033[1;35m"
+#define GRN   "\033[0;92m"
+#define SGRN  "\033[0;32m"
+#define RED   "\033[0;31m"
+#define WHT   "\033[0;97m"
+#define GRY   "\033[0;90m"
+#define IGRY  "\033[2;37m"
 
-// === Box-drawing ===
+// Box-drawing characters for the fancy borders
 #define TL  "╔"
 #define TR  "╗"
 #define BL  "╚"
@@ -62,17 +59,17 @@
 #define SLT "├"
 #define SRT "┤"
 
-// Width of all menus 
+// All menus share this width so everything lines up neatly
 #define W 70
+#define SW (W + 20)   // status bar is a bit wider than the menus
 
- #define SW (W + 20)   /* status-bar width — wider than menus */
 
+// ─────────────────────────────────────────────────────────────
+//  TERMINAL WIDTH + CENTERING
+// ─────────────────────────────────────────────────────────────
 
-#define VENN_W 95
-
-// Helpers to print padded box rows without ANSI-width bugs
-
-// Compute horizontal offset so framed blocks are centered in the terminal
+// Ask the OS how wide the terminal currently is.
+// We use this so the boxes stay centered even if the user resizes.
 static int get_terminal_width(void) {
 #ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -89,8 +86,9 @@ static int get_terminal_width(void) {
 #endif
 }
 
+// How many spaces to print before each box line so it appears centered
 static int frame_margin(void) {
-    int total_w = W + 2; 
+    int total_w = W + 2;
     int term_w = get_terminal_width();
     int pad = (term_w - total_w) / 2;
     return pad > 0 ? pad : 0;
@@ -100,6 +98,7 @@ static void print_indent(int n) {
     for (int i = 0; i < n; i++) putchar(' ');
 }
 
+// Same idea but for the status bar which has a different width
 static int status_frame_margin(int sw) {
     int total_w = sw + 2;
     int term_w  = get_terminal_width();
@@ -107,20 +106,21 @@ static int status_frame_margin(int sw) {
     return pad > 0 ? pad : 0;
 }
 
-// Helper: count visible characters only (skip ANSI escape sequences)
+// ANSI escape sequences are invisible but strlen() counts their bytes,
+// which breaks padding math. This walks the string and only counts
+// characters that actually appear on screen.
 static int visible_len(const char* s) {
     int len = 0;
     while (*s) {
         if (*s == '\033') {
-            // skip ANSI escape sequence until 'm'
+            // skip the whole escape sequence (ends at 'm')
             while (*s && *s != 'm') s++;
             if (*s) s++;
         } else if ((unsigned char)*s >= 0x80) {
-            // UTF-8 multi-byte character
-            if ((unsigned char)*s >= 0xC0) len++; // only leading byte counts as 1 column
+            // UTF-8: multi-byte codepoint — only the leading byte counts as one column
+            if ((unsigned char)*s >= 0xC0) len++;
             s++;
         } else {
-            // normal ASCII character
             len++;
             s++;
         }
@@ -128,16 +128,18 @@ static int visible_len(const char* s) {
     return len;
 }
 
+// Print a left-aligned row inside the box, padded to fill the width
 static void row(const char* col, const char* text, int content_w) {
-    int len = visible_len(text);   // ← was strlen(text)
+    int len = visible_len(text);
     int pad = content_w - len;
     if (pad < 0) pad = 0;
     print_indent(frame_margin());
     printf(CYN VL RST " %s%s%s%*s " CYN VL RST "\n", col, text, RST, pad, "");
 }
 
+// Same as row() but centers the text horizontally
 static void rowc(const char* col, const char* text, int content_w) {
-    int len   = visible_len(text); // ← was strlen(text)
+    int len   = visible_len(text);
     int total = content_w - len;
     int lpad  = total / 2;
     int rpad  = total - lpad;
@@ -165,6 +167,7 @@ static void bot_rule(void) {
     printf(BR RST "\n");
 }
 
+// A thin dashed line inside the box — used to separate sections
 static void sep_row(void) {
     print_indent(frame_margin());
     printf(CYN VL GRY);
@@ -177,13 +180,17 @@ static void blank_row(void) {
     printf(CYN VL "%*s" VL RST "\n", W, "");
 }
 
-// ── Global state ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+//  GLOBAL STATE
+// ─────────────────────────────────────────────────────────────
+
 ParaList* files[MAX_FILES];
 char      file_names[MAX_FILES][256];
 int       file_count = 0;
 
+// The "working set" — gets updated every time the user applies an operation
 WordNode* result     = NULL;
-char      current_op = '\0';
+char      current_op = '\0';   // 'U', 'I', or 'D'
 
 // ─────────────────────────────────────────────────────────────
 //  BASIC UTILITIES
@@ -215,6 +222,16 @@ void pause_return(const char* menu_name) {
 // ─────────────────────────────────────────────────────────────
 //  SPLASH SCREEN
 // ─────────────────────────────────────────────────────────────
+
+static void typewriter(const char* color, const char* text, int delay_ms) {
+    printf("%s", color);
+    while (*text) {
+        putchar(*text++);
+        fflush(stdout);
+        sleep_ms(delay_ms);
+    }
+    printf(RST);
+}
 
 void printESI(void) {
     clrscr();
@@ -248,14 +265,30 @@ void printESI(void) {
     printf("\t        \033[0;107m                  \033[0m          \033[0;107m                  \033[0m       \033[0;107m       \033[0m  \n");
     sleep_ms(220);
 
+    // animated WELCOME — each letter typed slowly so it feels big and deliberate
     printf("\n");
+    print_indent(frame_margin());
+    typewriter(BGLD, "W", 120);
+    typewriter(BGLD, "E", 120);
+    typewriter(BGLD, "L", 120);
+    typewriter(BGLD, "C", 120);
+    typewriter(BGLD, "O", 120);
+    typewriter(BGLD, "M", 120);
+    typewriter(BGLD, "E", 120);
+    printf("\n");
+    print_indent(frame_margin());
+    sleep_ms(150);
+    // subtitle races in quickly underneath the big WELCOME
+    typewriter(GRY, "to the Text Set Operations Lab", 22);
+    printf("\n\n");
+    sleep_ms(300);
+
+    // overview box
     top_rule();
-    rowc(BGLD, "WELCOME TO THE TEXT SET OPERATIONS LAB", W - 2);
+    rowc(BGLD, "PROJECT OVERVIEW  —  TEXT SET OPERATIONS LAB", W - 2);
     mid_rule();
-    sleep_ms(80);
     blank_row();
     rowc(MGT,  "Algorithmics & Dynamic Data Structures", W - 2);
-    sleep_ms(70);
     blank_row();
     rowc(WHT, "This tool lets you load text files, decompose them into", W - 2);
     sleep_ms(60);
@@ -324,43 +357,31 @@ void print_status_bar(void) {
     const char* op_col  = (current_op == '\0') ? GRY : BMGT;
     const char* res_col = (result != NULL)      ? SGRN : GRY;
 
+    // Divide the bar into 3 equal cells. We recompute actual_sw
+    // from cw so the border math is consistent regardless of SW's value.
     int cw = (SW - 8) / 3;
-    int actual_sw = cw * 3 + 8; 
+    int actual_sw = cw * 3 + 8;
 
-    char cell_f[64], cell_o[64], cell_r[64];
-    snprintf(cell_f, sizeof(cell_f), "Files: %s",     files_str);
-    snprintf(cell_o, sizeof(cell_o), "Operation: %s", op_str);
-    snprintf(cell_r, sizeof(cell_r), "Result: %s",    res_str);
-
-    /* top border — uses status_frame_margin */
     print_indent(status_frame_margin(actual_sw));
     printf(CYN TL);
     for (int i = 0; i < actual_sw; i++) printf(HL);
     printf(TR RST "\n");
 
-    /* content row — uses status_frame_margin */
     print_indent(status_frame_margin(actual_sw));
     printf(CYN VL RST);
 
     printf("  " GLD "Files" RST ": %s%-*s" RST,
-           file_count > 0 ? SGRN : GRY,
-           cw - 7,
-           files_str);
+           file_count > 0 ? SGRN : GRY, cw - 7, files_str);
     printf(CYN VL RST);
 
     printf("  " GLD "Operation" RST ": %s%-*s" RST,
-           op_col,
-           cw - 11,
-           op_str);
+           op_col, cw - 11, op_str);
     printf(CYN VL RST);
 
     printf("  " GLD "Result" RST ": %s%-*s" RST,
-           res_col,
-           cw - 8,
-           res_str);
+           res_col, cw - 8, res_str);
     printf(CYN VL RST "\n");
 
-    /* bottom border — uses status_frame_margin */
     print_indent(status_frame_margin(actual_sw));
     printf(CYN BL);
     for (int i = 0; i < actual_sw; i++) printf(HL);
@@ -369,17 +390,22 @@ void print_status_bar(void) {
     printf("\n");
 }
 
+// ─────────────────────────────────────────────────────────────
+//  WORD DISPLAY
+// ─────────────────────────────────────────────────────────────
 
-// ────────────────────────────────────────────────────────────
-// WORD DISPLAY
-// ────────────────────────────────────────────────────────────
-
+// Do an in-order traversal of the BST iteratively (using an explicit stack
+// instead of recursion) to collect words in sorted order, then print them
+// wrapped across multiple box rows so they don't overflow the border.
 static void print_words_wrapped(WordNode* R, int content_w) {
     int total = count_words(R);
     if (total == 0) return;
 
     char** words = malloc(total * sizeof(char*));
     int n = 0;
+
+    // Iterative in-order traversal — go left as far as possible,
+    // visit, then go right. Avoids stack overflow on large BSTs.
     WordNode* stack[512];
     int top = 0;
     WordNode* cur = R;
@@ -390,7 +416,6 @@ static void print_words_wrapped(WordNode* R, int content_w) {
         cur = cur->right;
     }
 
-    // Build lines of plain text, then print each via row()
     char line[1024];
     line[0] = '\0';
     int col = 0;
@@ -404,8 +429,8 @@ static void print_words_wrapped(WordNode* R, int content_w) {
 
         int tlen = visible_len(token);
 
+        // Word doesn't fit on this line — flush it and start fresh
         if (col + tlen > content_w - 4 && col > 0) {
-            // flush current line
             row(BMGT, line, content_w);
             line[0] = '\0';
             col = 0;
@@ -414,13 +439,13 @@ static void print_words_wrapped(WordNode* R, int content_w) {
         strncat(line, token, rem);
         col += tlen;
     }
-    if (col > 0) row(BMGT, line, content_w);  // flush last line
+    if (col > 0) row(BMGT, line, content_w);
 
     free(words);
 }
 
 // ─────────────────────────────────────────────────────────────
-//  PARAGRAPH PREVIEW CARDS  (single-border inner style)
+//  PARAGRAPH PREVIEW CARDS
 // ─────────────────────────────────────────────────────────────
 
 void print_para_card(ParaNode* node, int fi) {
@@ -429,20 +454,21 @@ void print_para_card(ParaNode* node, int fi) {
     print_indent(frame_margin());
     printf(CYN STL SHL " " BGLD "Paragraph #%d" RST CYN " " SHL SHL " " GLD "%s" RST CYN,
            para_num(node), file_names[fi]);
- 
+
     int used = 16 + (int)strlen(file_names[fi]);
     for (int i = used; i < W - 2; i++) printf(SHL);
     printf(STR RST "\n");
 
-   for (int i = 0; i < node->line_count; i++) {
-    row(WHT, node->lines[i], W - 2); }
+    for (int i = 0; i < node->line_count; i++) {
+        row(WHT, node->lines[i], W - 2);
+    }
 
     print_indent(frame_margin());
     printf(CYN SLT);
     for (int i = 0; i < W - 2; i++) printf(SHL);
     printf(SRT RST "\n");
 
-     char wlabel[64];
+    char wlabel[64];
     snprintf(wlabel, sizeof(wlabel), "Word set (%d unique word%s):", wc, wc == 1 ? "" : "s");
     row(BMGT, wlabel, W - 2);
     print_words_wrapped(word_set(node), W - 2);
@@ -457,6 +483,8 @@ void print_para_card(ParaNode* node, int fi) {
 //  WORD GRID
 // ─────────────────────────────────────────────────────────────
 
+// Module-level scratch buffer used by _collect + print_word_grid.
+// Kept global so we don't have to pass pointers through the recursion.
 static char** _warr   = NULL;
 static int    _warr_n = 0;
 
@@ -475,8 +503,10 @@ void print_word_grid(WordNode* R) {
     _warr_n = 0;
     _collect(R);
 
-    int cols  = 4;
-    int cw    = (W - 2) / cols;   
+    int cols    = 4;
+    int content = W - 2 - (cols - 1);   
+    int cw      = content / cols;        
+    int extra   = content % cols;       
 
     top_rule();
     char title[32];
@@ -488,12 +518,20 @@ void print_word_grid(WordNode* R) {
         print_indent(frame_margin());
         printf(CYN VL RST);
         for (int c = 0; c < cols; c++) {
+            int cell_w = cw + (c == 0 ? extra : 0);  
+            char cell[64] = "";
             if (i + c < total)
-                printf(" " BMGT "%-*s" RST CYN VL RST, cw - 2, _warr[i + c]);
+                snprintf(cell, sizeof(cell), " %-*s", cell_w - 1, _warr[i + c]);
             else
-                printf(" %-*s" CYN VL RST, cw - 2, "");
+                snprintf(cell, sizeof(cell), " %-*s", cell_w - 1, "");
+            if (i + c < total)
+                printf(BMGT "%s" RST, cell);
+            else
+                printf("%s", cell);
+            if (c < cols - 1)
+                printf(CYN VL RST);
         }
-        printf("\n");
+        printf(CYN VL RST "\n");
     }
 
     bot_rule();
@@ -505,22 +543,29 @@ void print_word_grid(WordNode* R) {
 // ─────────────────────────────────────────────────────────────
 //  VENN DIAGRAM
 // ─────────────────────────────────────────────────────────────
+
+// Draws a simple ASCII Venn diagram showing how many words are
+// exclusive to A, shared between A and B, and exclusive to B.
+// The counts come from computing temp DIFFERENCEs and INTERSECTION
+// before the actual operation is applied (see action_apply).
 void print_venn(char op, int a_only, int shared, int b_only) {
 
     const char* op_name =
         op == 'U' ? "UNION" :
         op == 'I' ? "INTERSECTION" : "DIFFERENCE";
 
+    // Unicode math symbols for the formula display
     const char* formula =
-        op == 'U' ? "A \xe2\x88\xaa B" :   /* A ∪ B */
-        op == 'I' ? "A \xe2\x88\xa9 B" :   /* A ∩ B */
+        op == 'U' ? "A \xe2\x88\xaa B" :   // A ∪ B
+        op == 'I' ? "A \xe2\x88\xa9 B" :   // A ∩ B
                     "A \\ B";
 
+    // The result size depends on the operation:
+    // Union keeps everything, intersection keeps only shared, difference keeps only a_only
     int result_size =
         op == 'U' ? a_only + shared + b_only :
         op == 'I' ? shared : a_only;
 
-    /* ── title ────────────────────────────────────────────── */
     printf("\n");
     top_rule();
     char title[80];
@@ -529,67 +574,22 @@ void print_venn(char op, int a_only, int shared, int b_only) {
     mid_rule();
     blank_row();
 
-    /* ── diagram body ─────────────────────────────────────── *
-     *
-     *  We draw two overlapping rectangles built from ASCII.
-     *  Each row of the diagram is one printf.
-     *
-     *  Layout (all widths in characters, total inner = W-2):
-     *
-     *   |<-------- W-2 chars -------->|
-     *   |  [  A-rect  |overlap| B-rect  ]  |
-     *
-     *  A-rect left edge  : col 4
-     *  overlap left edge : col 24   (right edge of A-rect body)
-     *  overlap right edge: col 34
-     *  B-rect right edge : col 54
-     *
-     *  Rows:
-     *   0  top edges of both rects
-     *   1  side walls + labels row 1  ("A only"  |  |  "B only")
-     *   2  side walls + numbers        (  16      | 7|   18    )
-     *   3  side walls + labels row 2  (empty for clean look)
-     *   4  bottom edges of both rects
-     *
-     * ──────────────────────────────────────────────────────── */
-
-    /* We format each diagram line into a buffer then pass it to rowc.
-       Use snprintf so widths stay exact regardless of number length.   */
-
     char line[256];
 
-    /* row 0 – top borders
-       A: +-------...   overlap: ---+---   B: ...-------+
-       The overlap corners sit where the two rects cross.          */
-    snprintf(line, sizeof(line),
-        "    +------------------+-------+------------------+    ");
-    rowc(BCYN, line, W - 2);
+    rowc(BCYN, "    +------------------+-------+------------------+    ", W - 2);
+    rowc(BCYN, "    |    A only        |       |    B only        |    ", W - 2);
 
-    /* row 1 – label line */
-    snprintf(line, sizeof(line),
-        "    |    A only        |       |    B only        |    ");
-    rowc(BCYN, line, W - 2);
-
-    /* row 2 – counts.  %-6d / %3d / %-6d keeps columns stable. */
     snprintf(line, sizeof(line),
         "    |    %-6d        | %3d   |    %-6d        |    ",
         a_only, shared, b_only);
     rowc(BCYN, line, W - 2);
 
-    /* row 3 – empty interior */
-    snprintf(line, sizeof(line),
-        "    |                  |       |                  |    ");
-    rowc(BCYN, line, W - 2);
-
-    /* row 4 – bottom borders (mirror of row 0) */
-    snprintf(line, sizeof(line),
-        "    +------------------+-------+------------------+    ");
-    rowc(BCYN, line, W - 2);
+    rowc(BCYN, "    |                  |       |                  |    ", W - 2);
+    rowc(BCYN, "    +------------------+-------+------------------+    ", W - 2);
 
     blank_row();
-
-    /* ── legend / formula bar ─────────────────────────────── */
     sep_row();
+
     char stats[160];
     snprintf(stats, sizeof(stats),
         "Operation : %-14s   Formula : %s   |%s| = %d word%s",
@@ -600,6 +600,7 @@ void print_venn(char op, int a_only, int shared, int b_only) {
     bot_rule();
     printf("\n");
 }
+
 // ─────────────────────────────────────────────────────────────
 //  LOADED FILES LIST
 // ─────────────────────────────────────────────────────────────
@@ -641,7 +642,7 @@ int confirm_exit(void) {
     scanf("%7s", buf);
     flush_input();
     char c = buf[0];
-    if (c >= 'a' && c <= 'z') c = (char)(c - 32);
+    if (c >= 'a' && c <= 'z') c = (char)(c - 32);   // tolower manually
     return (c == 'Y') ? 1 : 0;
 }
 
@@ -664,6 +665,7 @@ void action_load_files(void) {
         scanf("%255s", fname);
         flush_input();
 
+        // Don't load the same file twice — it would create duplicate word sets
         int already = 0;
         for (int j = 0; j < file_count; j++)
             if (strcmp(file_names[j], fname) == 0) { already = 1; break; }
@@ -809,12 +811,17 @@ void action_apply(void) {
                        : current_op == 'I' ? "INTERSECTION" : "DIFFERENCE";
 
     if (result == NULL) {
+        // First paragraph selected — seed the result with a copy of its word set.
+        // We copy instead of pointing directly so future operations don't corrupt
+        // the original paragraph's BST.
         new_result = copy_bst(B);
         printf(SGRN "\n  ✓  Result seeded with paragraph #%d from '%s'  (%d words).\n" RST,
                pid, file_names[fi], count_words(new_result));
     } else {
         int before = count_words(result);
 
+        // Compute the three regions of the Venn diagram BEFORE modifying result,
+        // so we can show the diagram with accurate counts.
         WordNode* tmp_ao = DIFFERENCE(result, B);
         WordNode* tmp_sh = INTERSECTION(result, B);
         WordNode* tmp_bo = DIFFERENCE(B, result);
@@ -826,7 +833,7 @@ void action_apply(void) {
         if (current_op == 'U') new_result = UNION(result, B);
         if (current_op == 'I') new_result = INTERSECTION(result, B);
         if (current_op == 'D') new_result = DIFFERENCE(result, B);
-        free_bst(result);
+        free_bst(result);   // drop the old result — new_result takes over
 
         int after = count_words(new_result);
         printf(SGRN "\n  ✓  %s applied.  " RST MGT "%d" RST SGRN "  →  " RST BMGT "%d words\n" RST,
@@ -875,9 +882,9 @@ void menu_operations(void) {
         switch (ch) {
             case 1: action_select_operation(); break;
             case 2:
-                if (file_count == 0)       printf(GLD "  ⚠  Load files first.\n" RST);
+                if (file_count == 0)         printf(GLD "  ⚠  Load files first.\n" RST);
                 else if (current_op == '\0') printf(GLD "  ⚠  Select an operation first (option 1).\n" RST);
-                else                        action_apply();
+                else                         action_apply();
                 break;
             case 0: running = 0; break;
             default: printf(RED "  ✗  Unknown option.\n" RST); break;
@@ -924,6 +931,8 @@ int action_repeat_or_exit(void) {
 //  RESULT SUB-MENU
 // ─────────────────────────────────────────────────────────────
 
+// Returns 1 if the user confirmed they want to exit, 0 otherwise.
+// The main loop uses this return value to know when to stop.
 int menu_result(void) {
     int running = 1;
     while (running) {
@@ -979,7 +988,6 @@ void print_main_menu(void) {
     rowc(BGLD, "TEXT SET OPERATIONS  —  MAIN MENU", W - 2);
     mid_rule();
 
-    // Files
     if (file_count > 0) {
         char buf[64];
         snprintf(buf, sizeof(buf), "1.  Files                              [%d file%s loaded]",
@@ -988,7 +996,7 @@ void print_main_menu(void) {
     } else {
         row(GRN, "1.  Files", W - 2);
     }
-    // Operations
+
     if (current_op != '\0') {
         char buf[64];
         const char* n = current_op == 'U' ? "UNION"
@@ -998,7 +1006,7 @@ void print_main_menu(void) {
     } else {
         row(GRN, "2.  Operations", W - 2);
     }
-    // Result
+
     if (result) {
         char buf[64];
         snprintf(buf, sizeof(buf), "3.  Result                             [%d word%s]",
@@ -1048,6 +1056,8 @@ int main(void) {
 
     print_exit_animation();
 
+    // Clean up everything before exit — free all loaded paragraph lists
+    // and the current result BST to avoid memory leaks.
     for (int i = 0; i < file_count; i++) free_para_list(files[i]);
     if (result) free_bst(result);
     return 0;
