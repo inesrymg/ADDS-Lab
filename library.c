@@ -144,7 +144,7 @@ ParaList* create_para_list() {
 } 
 
 void insert_para(ParaList* list, WordNode* para, int num, char** lines, int line_count)
-// adds a new paragraph at the beginning of the LL
+// adds a new paragraph to the end of the list
 {
     ParaNode* new_node = (ParaNode*)malloc(sizeof(ParaNode));
 
@@ -152,10 +152,17 @@ void insert_para(ParaList* list, WordNode* para, int num, char** lines, int line
     ass_word_set(new_node, para);
     new_node->lines = lines;
     new_node->line_count = line_count;
-    ass_next(new_node, list->head);
+    ass_next(new_node, NULL); 
 
-    list->head = new_node;
-} 
+    if (list->head == NULL) {
+        list->head = new_node;  
+    } else {
+        ParaNode* current = list->head;
+        while (current->next != NULL)
+            current = current->next;
+        current->next = new_node;  
+    }
+}
 
 ParaNode* get_para(ParaList* list, int num)
 // searches for a paragraph in the LL
