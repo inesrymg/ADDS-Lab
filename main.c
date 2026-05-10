@@ -1038,7 +1038,16 @@ int main(void) {
 
     #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8); // Tells Windows console to use UTF-8
-#endif
+    #endif
+
+    clrscr();
+    printf("\n\n\n");
+    print_indent(frame_margin());
+    typewriter(BGLD, "Please put your terminal in full-screen mode before starting.", 30);
+    printf("\n\n");
+    print_indent(frame_margin());
+    typewriter(IGRY, "Press Enter to continue...", 20);
+    getchar();
 
     printESI();
 
