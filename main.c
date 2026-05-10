@@ -265,7 +265,6 @@ void printESI(void) {
     printf("\t        \033[0;107m                  \033[0m          \033[0;107m                  \033[0m       \033[0;107m       \033[0m  \n");
     sleep_ms(220);
 
-    // animated WELCOME — each letter typed slowly so it feels big and deliberate
     printf("\n");
     print_indent(frame_margin());
     typewriter(BGLD, "W", 120);
@@ -278,14 +277,12 @@ void printESI(void) {
     printf("\n");
     print_indent(frame_margin());
     sleep_ms(150);
-    // subtitle races in quickly underneath the big WELCOME
     typewriter(GRY, "to the Text Set Operations Lab", 22);
     printf("\n\n");
     sleep_ms(300);
 
-    // overview box
     top_rule();
-    rowc(BGLD, "PROJECT OVERVIEW  —  TEXT SET OPERATIONS LAB", W - 2);
+    rowc(BGLD, "TP C:  TEXT SET OPERATIONS", W - 2);
     mid_rule();
     blank_row();
     rowc(MGT,  "Algorithmics & Dynamic Data Structures", W - 2);
@@ -302,6 +299,7 @@ void printESI(void) {
     blank_row();
     row(GLD,  "  Supervised by  :  Dr. KERMI ADEL", W - 2);
     row(MGT,  "  Authors        :  GHEDBANE Ines Rym  &  AGGOUN Houcine", W - 2);
+    row(RED, "                            G04                 G03      ", W - 2);
     row(GRN,  "  Academic Year  :  2025 / 2026", W - 2);
     blank_row();
     bot_rule();
@@ -318,15 +316,38 @@ void printESI(void) {
 void print_exit_animation(void) {
     clrscr();
     sleep_ms(80);
+
+     printf("\n");
+    print_indent(frame_margin());
+    typewriter(BGLD, "G", 120);
+    typewriter(BGLD, "O", 120);
+    typewriter(BGLD, "O", 120);
+    typewriter(BGLD, "D", 120);
+    typewriter(BGLD, "B", 120);
+    typewriter(BGLD, "Y", 120);
+    typewriter(BGLD, "E", 120);
+    printf("\n");
+    print_indent(frame_margin());
+    sleep_ms(150);
+
+    printf("\n");
+    print_indent(frame_margin());
+    sleep_ms(150);
+    typewriter(GRY, "Thanks for using the Text Set Operations Lab", 20);
     printf("\n\n");
+    sleep_ms(400);
+
     top_rule();
     rowc(BGLD, "SESSION ENDED", W - 2);
     mid_rule();
     blank_row();
     rowc(WHT,  "Thank you for using the Text Set Operations Lab.", W - 2);
     blank_row();
+    row(BMGT, "                              TP C                        ", W - 2);
+    blank_row();
     row(GLD,  "  Supervised by  :  " BCYN "Dr. KERMI ADEL", W - 2);
     row(GLD,  "  Authors        :  " MGT  "GHEDBANE Ines Rym   &   AGGOUN Houcine", W - 2);
+    row(RED, "                                  G04                   G03      ", W - 2);
     blank_row();
     rowc(SGRN, "Goodbye!", W - 2);
     blank_row();
@@ -404,7 +425,7 @@ static void print_words_wrapped(WordNode* R, int content_w) {
     char** words = malloc(total * sizeof(char*));
     int n = 0;
 
-    // Iterative in-order traversal — go left as far as possible,
+    // Iterative in-order traversal, go left as far as possible,
     // visit, then go right. Avoids stack overflow on large BSTs.
     WordNode* stack[512];
     int top = 0;
@@ -429,7 +450,6 @@ static void print_words_wrapped(WordNode* R, int content_w) {
 
         int tlen = visible_len(token);
 
-        // Word doesn't fit on this line — flush it and start fresh
         if (col + tlen > content_w - 4 && col > 0) {
             row(BMGT, line, content_w);
             line[0] = '\0';
@@ -811,7 +831,7 @@ void action_apply(void) {
                        : current_op == 'I' ? "INTERSECTION" : "DIFFERENCE";
 
     if (result == NULL) {
-        // First paragraph selected — seed the result with a copy of its word set.
+        // First paragraph selected, seed the result with a copy of its word set.
         // We copy instead of pointing directly so future operations don't corrupt
         // the original paragraph's BST.
         new_result = copy_bst(B);
@@ -1027,6 +1047,11 @@ void print_main_menu(void) {
 // ─────────────────────────────────────────────────────────────
 
 int main(void) {
+
+    #ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8); // Tells Windows console to use UTF-8
+#endif
+
     printESI();
 
     int running = 1;
@@ -1056,7 +1081,7 @@ int main(void) {
 
     print_exit_animation();
 
-    // Clean up everything before exit — free all loaded paragraph lists
+    // Clean up everything before exit, free all loaded paragraph lists
     // and the current result BST to avoid memory leaks.
     for (int i = 0; i < file_count; i++) free_para_list(files[i]);
     if (result) free_bst(result);
