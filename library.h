@@ -6,25 +6,26 @@
 #include <ctype.h>
 #include <stdbool.h>
 
-typedef struct WordNode {
+// structure definitions 
+typedef struct WordNode { 
     char word[50];
     struct WordNode* left;
     struct WordNode* right;
-} WordNode;
+} WordNode; // Node of a binary search tree representing a set of words
 
-typedef struct ParaNode {
+typedef struct ParaNode { 
     int para_num;
     WordNode* word_set;
     char** lines;
     int line_count;
-    struct ParaNode* next;
-} ParaNode;
+    struct ParaNode* next; 
+} ParaNode; // Node of a linked list representing a paragraph
 
-typedef struct {
+typedef struct { 
     ParaNode* head;
-} ParaList;
+} ParaList; // Linked list of paragraphs
 
-// BST operations
+// bst
 char* node_value(WordNode* node);
 WordNode* LC(WordNode* node);
 WordNode* RC(WordNode* node);
@@ -39,7 +40,7 @@ WordNode* copy_bst(WordNode* R);
 void inorder_traversal(WordNode* R);
 int count_words(WordNode* R);
 
-// paragraph list operations
+// paragraph list
 int para_num(ParaNode* node);
 WordNode* word_set(ParaNode* node);
 ParaNode* next_para(ParaNode* node);
@@ -54,7 +55,7 @@ ParaList* copy_para_list(ParaList* list);
 void print_para_list(ParaList* list);
 int count_paragraphs(ParaList* list);
 
-ParaList* para_list_load(const char* filename);
+ParaList* para_list_load(const char* filename); // loads files
 
 // useful functions
 void to_lower_str(char* word);
@@ -62,14 +63,12 @@ void remove_punct(char* word);
 int normalise_word(char* word);
 
 // operations
+WordNode* copy_into(WordNode* A, WordNode* B);
 WordNode* UNION(WordNode* A, WordNode* B);
+WordNode* common_words(WordNode* A, WordNode* B, WordNode* result);
 WordNode* INTERSECTION(WordNode* A, WordNode* B);
+WordNode* diff_words(WordNode* A, WordNode* B, WordNode* result);
 WordNode* DIFFERENCE(WordNode* A, WordNode* B);
-
-
-
-
-
 
 
 

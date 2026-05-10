@@ -1,13 +1,9 @@
-// ADDS Lab - Text Set Operations
-// Supervised by : Dr. KERMI ADEL
-// Authors       : GHEDBANE INES RYM  &  AGGOUN HOUCINE
-// Module        : Algorithmics & Dynamic Data Structures
-// Academic Year : 2025 / 2026
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "library.h"
+
+// ------------------------------- THE MENU --------------------------------
 
 #ifdef _WIN32
   #include <windows.h>
@@ -106,18 +102,14 @@ static int status_frame_margin(int sw) {
     return pad > 0 ? pad : 0;
 }
 
-// ANSI escape sequences are invisible but strlen() counts their bytes,
-// which breaks padding math. This walks the string and only counts
-// characters that actually appear on screen.
+
 static int visible_len(const char* s) {
     int len = 0;
     while (*s) {
         if (*s == '\033') {
-            // skip the whole escape sequence (ends at 'm')
             while (*s && *s != 'm') s++;
             if (*s) s++;
         } else if ((unsigned char)*s >= 0x80) {
-            // UTF-8: multi-byte codepoint — only the leading byte counts as one column
             if ((unsigned char)*s >= 0xC0) len++;
             s++;
         } else {
@@ -167,7 +159,6 @@ static void bot_rule(void) {
     printf(BR RST "\n");
 }
 
-// A thin dashed line inside the box — used to separate sections
 static void sep_row(void) {
     print_indent(frame_margin());
     printf(CYN VL GRY);
@@ -188,7 +179,7 @@ ParaList* files[MAX_FILES];
 char      file_names[MAX_FILES][256];
 int       file_count = 0;
 
-// The "working set" — gets updated every time the user applies an operation
+// gets updated every time the user applies an operation
 WordNode* result     = NULL;
 char      current_op = '\0';   // 'U', 'I', or 'D'
 
@@ -231,7 +222,7 @@ static void typewriter(const char* color, const char* text, int delay_ms) {
         sleep_ms(delay_ms);
     }
     printf(RST);
-}
+} // Print text one character at a time with a delay
 
 void printESI(void) {
     clrscr();
@@ -377,9 +368,6 @@ void print_status_bar(void) {
 
     const char* op_col  = (current_op == '\0') ? GRY : BMGT;
     const char* res_col = (result != NULL)      ? SGRN : GRY;
-
-    // Divide the bar into 3 equal cells. We recompute actual_sw
-    // from cw so the border math is consistent regardless of SW's value.
     int cw = (SW - 8) / 3;
     int actual_sw = cw * 3 + 8;
 
@@ -662,7 +650,7 @@ int confirm_exit(void) {
     scanf("%7s", buf);
     flush_input();
     char c = buf[0];
-    if (c >= 'a' && c <= 'z') c = (char)(c - 32);   // tolower manually
+    if (c >= 'a' && c <= 'z') c = (char)(c - 32); 
     return (c == 'Y') ? 1 : 0;
 }
 
@@ -764,12 +752,12 @@ void menu_files(void) {
         flush_input();
 
         switch (ch) {
-            case 1: action_load_files(); break;
-            case 2:
+            case 1: action_load_files(); break; // loads one or more files, updates file_count
+            case 2: // shows a list of loaded files, user picks one, then shows cards for each paragraph
                 if (file_count == 0) printf(GLD "  ⚠  Load files first.\n" RST);
                 else                 action_view_paragraphs();
                 break;
-            case 0: running = 0; break;
+            case 0: running = 0; break; // back to main menu
             default: printf(RED "  ✗  Unknown option.\n" RST); break;
         }
         if (running && ch != 0) pause_return("Files Menu");
@@ -900,13 +888,13 @@ void menu_operations(void) {
         flush_input();
 
         switch (ch) {
-            case 1: action_select_operation(); break;
-            case 2:
+            case 1: action_select_operation(); break; // we just select the operation, we don't apply yet
+            case 2: // Applying the operation requires both an operation selected and files loaded, so we check those first
                 if (file_count == 0)         printf(GLD "  ⚠  Load files first.\n" RST);
                 else if (current_op == '\0') printf(GLD "  ⚠  Select an operation first (option 1).\n" RST);
                 else                         action_apply();
-                break;
-            case 0: running = 0; break;
+                break; 
+            case 0: running = 0; break; // Back to main menu
             default: printf(RED "  ✗  Unknown option.\n" RST); break;
         }
         if (running && ch != 0) pause_return("Operations Menu");
@@ -981,15 +969,15 @@ int menu_result(void) {
         flush_input();
 
         switch (ch) {
-            case 1:
+            case 1: // View the result set in a grid
                 if (!result) printf(GLD "  ⚠  Load files and apply an operation first.\n" RST);
                 else         action_view_result();
                 break;
-            case 2:
+            case 2: // Chain another operation on the current result 
                 if (!result) printf(GLD "  ⚠  Generate a result first.\n" RST);
                 else if (action_repeat_or_exit()) return 1;
                 break;
-            case 0: running = 0; break;
+            case 0: running = 0; break; // Back to main menu
             default: printf(RED "  ✗  Unknown option.\n" RST); break;
         }
         if (running && ch != 0) pause_return("Result Menu");
@@ -1068,10 +1056,10 @@ int main(void) {
         flush_input();
 
         switch (ch) {
-            case 1: menu_files();                          break;
-            case 2: menu_operations();                     break;
-            case 3: if (menu_result()) running = 0;        break;
-            case 0: if (confirm_exit()) running = 0;       break;
+            case 1: menu_files();                          break; // Manage files: load new ones, view paragraphs and word sets
+            case 2: menu_operations();                     break; // Choose a set operation (U/I/D) and apply it to build the result BST
+            case 3: if (menu_result()) running = 0;        break; // View the result set in a grid, or chain another operation on it. If they choose to exit from there, bubble up the signal to stop the main loop.
+            case 0: if (confirm_exit()) running = 0;       break; // Exit confirmation from the main menu
             default:
                 printf(RED "  ✗  Unknown option.\n" RST);
                 sleep_ms(600);

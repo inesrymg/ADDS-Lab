@@ -110,7 +110,7 @@ int count_words(WordNode* R) {
 int para_num(ParaNode* node) {
     if (node == NULL) return -1;
     return node->para_num;
-}
+} 
 
 WordNode* word_set(ParaNode* node) {
     if (node == NULL) return NULL;
@@ -238,10 +238,10 @@ ParaList* para_list_load(const char* filename) { // loading the file
     char** current_lines = NULL;
     int current_line_count = 0;
 
-    while (fgets(line, sizeof(line), file)) {
+    while (fgets(line, sizeof(line), file)) { // Read a line from the file
         line[strcspn(line, "\r\n")] = '\0';
 
-        if (line[0] == '\0') {
+        if (line[0] == '\0') { // Empty line indicates end of current paragraph
             if (current_para != NULL) {
                 insert_para(list, current_para, para_id++, current_lines, current_line_count);
                 current_para = NULL;
@@ -251,15 +251,15 @@ ParaList* para_list_load(const char* filename) { // loading the file
         } else {
             // Save raw line
             current_lines = realloc(current_lines, (current_line_count + 1) * sizeof(char*));
-            current_lines[current_line_count++] = strdup(line);
+            current_lines[current_line_count++] = strdup(line); // Store a copy of the line
 
             char line_copy[1024];
             strncpy(line_copy, line, 1023);
             line_copy[1023] = '\0';
-            char* token = strtok(line_copy, " \t");
+            char* token = strtok(line_copy, " \t"); // tokenize the line into words using space and tab as delimiters
             while (token != NULL) {
                 char word[50];
-                strncpy(word, token, 49);
+                strncpy(word, token, 49); 
                 word[49] = '\0';
 
                 if (normalise_word(word) > 0)
@@ -307,7 +307,7 @@ int normalise_word(char* word) {
 
 // -------- SET OPERATIONS --------
 
-WordNode* copy_into(WordNode* A, WordNode* B) {
+WordNode* copy_into(WordNode* A, WordNode* B) { // Copy all words from A into B, returning the new tree. If B is NULL, creates a new tree.
     if (A == NULL) return B;
 
     B = insert_bst_NW(B, A->word);
@@ -317,14 +317,14 @@ WordNode* copy_into(WordNode* A, WordNode* B) {
     return B;
 } 
 
-WordNode* UNION(WordNode* A, WordNode* B) {
+WordNode* UNION(WordNode* A, WordNode* B) { // Return a new BST containing all words that are in A or B (or both). A and B are not modified.
     WordNode* unionTree = NULL;
     unionTree = copy_into(A, unionTree);
     unionTree = copy_into(B, unionTree);
     return unionTree;
 } 
 
-WordNode* common_words(WordNode* A, WordNode* B, WordNode* result) {
+WordNode* common_words(WordNode* A, WordNode* B, WordNode* result) { // Helper function for INTERSECTION: add to result all words in A that are also in B
     if (A == NULL) return result;
     if (search_bst(B, A->word))
         result = insert_bst_NW(result, A->word);
@@ -333,13 +333,13 @@ WordNode* common_words(WordNode* A, WordNode* B, WordNode* result) {
     return result;
 } 
 
-WordNode* INTERSECTION(WordNode* A, WordNode* B) {
+WordNode* INTERSECTION(WordNode* A, WordNode* B) { // Return a new BST containing all words that are in both A and B
     WordNode* interTree = NULL;
     interTree = common_words(A, B, interTree);
     return interTree;
 } 
 
-WordNode* diff_words(WordNode* A, WordNode* B, WordNode* result) {
+WordNode* diff_words(WordNode* A, WordNode* B, WordNode* result) { // Helper function for DIFFERENCE: add to result all words in A that are not in B
     if (A == NULL) return result;
 
     if (!search_bst(B, A->word))
@@ -351,7 +351,7 @@ WordNode* diff_words(WordNode* A, WordNode* B, WordNode* result) {
     return result;
 } 
 
-WordNode* DIFFERENCE(WordNode* A, WordNode* B) {
+WordNode* DIFFERENCE(WordNode* A, WordNode* B) { // Return a new BST containing all words that are in A but not in B
     WordNode* diffTree = NULL;
     diffTree = diff_words(A, B, diffTree);
     return diffTree;
