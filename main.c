@@ -1,3 +1,7 @@
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,9 +16,15 @@
     #undef DIFFERENCE
   #endif
 #else
-  #include <unistd.h>
-  #include <sys/ioctl.h>
-  #define sleep_ms(ms) usleep((ms) * 1000)
+    #include <time.h>
+    #include <sys/ioctl.h>
+    static void sleep_ms_impl(int ms) {
+            struct timespec ts;
+            ts.tv_sec = ms / 1000;
+            ts.tv_nsec = (ms % 1000) * 1000000L;
+            nanosleep(&ts, NULL);
+    }
+    #define sleep_ms(ms) sleep_ms_impl(ms)
 #endif
 
 #define MAX_FILES 16
@@ -452,41 +462,76 @@ static void print_words_wrapped(WordNode* R, int content_w) {
     free(words);
 }
 
+// --------------------------------------------------------------
+static void print_paragraph_centered(const char* text, int width) {
+    // Make a mutable copy so we can tokenize it
+    char* buf = strdup(text);
+    char* words[1024];
+    int wc = 0;
+
+    char* tok = strtok(buf, " \t\r\n");
+    while (tok && wc < 1024) { words[wc++] = tok; tok = strtok(NULL, " \t\r\n"); }
+
+    char line[512];
+    line[0] = '\0';
+    int col = 0;
+
+    for (int i = 0; i < wc; i++) {
+        int wlen = (int)strlen(words[i]);
+        int need = col == 0 ? wlen : wlen + 1; // +1 for the space separator
+
+        if (col > 0 && col + need > width) {
+            // Flush current line centered
+            int pad = (width - col) / 2;
+            print_indent(frame_margin() + pad);
+            printf("%s\n", line);
+            line[0] = '\0';
+            col = 0;
+        }
+
+        if (col > 0) { strcat(line, " "); col++; }
+        strcat(line, words[i]);
+        col += wlen;
+    }
+
+    // Flush last line
+    if (col > 0) {
+        int pad = (width - col) / 2;
+        print_indent(frame_margin() + pad);
+        printf("%s\n", line);
+    }
+
+    free(buf);
+}
+
 // ─────────────────────────────────────────────────────────────
 //  PARAGRAPH PREVIEW CARDS
 // ─────────────────────────────────────────────────────────────
-
 void print_para_card(ParaNode* node, int fi) {
     int wc = count_words(word_set(node));
 
+    // ── header ──
     print_indent(frame_margin());
-    printf(CYN STL SHL " " BGLD "Paragraph #%d" RST CYN " " SHL SHL " " GLD "%s" RST CYN,
+    printf(CYN "Paragraph #" BGLD "%d" RST CYN "  —  " GLD "%s" RST "\n",
            para_num(node), file_names[fi]);
 
-    int used = 16 + (int)strlen(file_names[fi]);
-    for (int i = used; i < W - 2; i++) printf(SHL);
-    printf(STR RST "\n");
+    printf("\n");
 
-    for (int i = 0; i < node->line_count; i++) {
-        row(WHT, node->lines[i], W - 2);
-    }
+    // ── paragraph text, word-wrapped and centered ──
+    for (int i = 0; i < node->line_count; i++)
+        print_paragraph_centered(node->lines[i], W);
 
-    print_indent(frame_margin());
-    printf(CYN SLT);
-    for (int i = 0; i < W - 2; i++) printf(SHL);
-    printf(SRT RST "\n");
+    printf("\n");
 
-    char wlabel[64];
-    snprintf(wlabel, sizeof(wlabel), "Word set (%d unique word%s):", wc, wc == 1 ? "" : "s");
-    row(BMGT, wlabel, W - 2);
+    // ── word-set box ──
+    top_rule();
+    char wc_str[64];
+    snprintf(wc_str, sizeof(wc_str), "Word set (%d unique word%s):", wc, wc == 1 ? "" : "s");
+    row(GLD, wc_str, W - 2);
+    blank_row();
     print_words_wrapped(word_set(node), W - 2);
-
-    print_indent(frame_margin());
-    printf(CYN SBL);
-    for (int i = 0; i < W - 2; i++) printf(SHL);
-    printf(SBR RST "\n");
+    bot_rule();
 }
-
 // ─────────────────────────────────────────────────────────────
 //  WORD GRID
 // ─────────────────────────────────────────────────────────────

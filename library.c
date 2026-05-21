@@ -1,9 +1,19 @@
+#define _POSIX_C_SOURCE 200809L 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include "library.h"
+
+// local strdup replacement to avoid implicit declaration on strict standards
+static char* xstrdup(const char* s) {
+    if (s == NULL) return NULL;
+    size_t n = strlen(s) + 1;
+    char* d = (char*)malloc(n);
+    if (d) memcpy(d, s, n);
+    return d;
+}
 
 // Abstract Machine - Binary Search Tree (Word Set)
 
@@ -202,7 +212,7 @@ ParaList* copy_para_list(ParaList* list) {
         WordNode* copied_para = copy_bst(word_set(current));
         char** copied_lines = (char**)malloc(current->line_count * sizeof(char*));
         for (int i = 0; i < current->line_count; i++)
-            copied_lines[i] = strdup(current->lines[i]);
+            copied_lines[i] = xstrdup(current->lines[i]);
         insert_para(new_list, copied_para, para_num(current), copied_lines, current->line_count); // Insert the copied paragraph into the new list
         current = next_para(current);
     }
@@ -258,7 +268,7 @@ ParaList* para_list_load(const char* filename) { // loading the file
         } else {
             // Save raw line
             current_lines = realloc(current_lines, (current_line_count + 1) * sizeof(char*));
-            current_lines[current_line_count++] = strdup(line); // Store a copy of the line
+            current_lines[current_line_count++] = xstrdup(line); // Store a copy of the line
 
             char line_copy[1024];
             strncpy(line_copy, line, 1023);
