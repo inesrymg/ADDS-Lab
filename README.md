@@ -36,11 +36,18 @@ A C-based interactive CLI application for performing **set operations on paragra
 ---
 
 ## 📂 Project Structure
-
-```
-├── main.c       # UI, menus, animations, and program entry point
-├── library.h    # Data structure definitions and function declarations
-├── library.c    # BST, paragraph list, set operations implementations
+```text
+ADDS-Lab/
+├── include/
+│   └── library.h    # Data structure definitions and function declarations
+├── src/
+│   ├── main.c       # UI, menus, animations, and program entry point
+│   └── library.c    # BST, paragraph list, set operations implementations
+├── tests/
+│   └── (sample text files)
+├── .gitignore
+├── LICENSE
+├── Makefile
 └── README.md
 ```
 
@@ -58,11 +65,11 @@ A C-based interactive CLI application for performing **set operations on paragra
 
 ### 🪟 Windows — PowerShell
 
-> ⚠️ Use **PowerShell**, not Command Prompt (CMD). The `;` separator between commands does not work in CMD.
+> ⚠️ Use **PowerShell**, not Command Prompt (CMD).
 
 ```powershell
 chcp 65001
-gcc -std=c99 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 -o adds-lab.exe main.c library.c
+make
 .\adds-lab.exe
 ```
 
@@ -71,7 +78,7 @@ gcc -std=c99 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 -o adds-la
 ### 🐧 Linux / 🍎 macOS
 
 ```bash
-gcc -std=c99 -Wall -Wextra -o adds-lab main.c library.c
+make
 ./adds-lab
 ```
 
